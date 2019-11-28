@@ -1,0 +1,11 @@
+path:
+  train_data: ../data/train.txt # 改为训练数据文件位置
+  model_file: ../models/sample_ft.model # 改为模型所在位置
+params:
+  label_prefix: __label__ # fasttext的label前缀
+  epoch: 500 # 训练轮次
+  thread: 5 # 训练使用的CPU数目
+  neg: 100 # 负样本的数量
+serve:
+  port: 12345 # 服务端口号
+  n_process: 1 # 进程数

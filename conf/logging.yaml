@@ -1,0 +1,23 @@
+version: 1
+disable_existing_loggers: False
+formatters:
+  verbose:
+    format: '[%(asctime)s] [%(levelname)s] [%(name)s:%(lineno)s] %(message)s'
+handlers:
+  console:
+    level: INFO
+    class: logging.StreamHandler
+    formatter: verbose
+  file:
+    level: INFO
+    class: logging.handlers.TimedRotatingFileHandler
+    filename: $ROOT_DIR/logs/app.log
+    when: D
+    interval: 1
+    backupCount: 10
+    formatter: verbose
+loggers:
+  '':
+    level: DEBUG
+    handlers: ['console', 'file']
+    propagate: False
