@@ -5,7 +5,7 @@ import os
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
 
-from neutral_semantic_retrieval.model import Classifier  # noqa
+from neu_sem_retrieval.model import Classifier  # noqa
 
 
 def test_classifier():
