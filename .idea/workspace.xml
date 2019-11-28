@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="50c948d7-1204-4f75-9176-12a90c65d686" name="Default Changelist" comment="" />
+    <list default="true" id="50c948d7-1204-4f75-9176-12a90c65d686" name="Default Changelist" comment="First commit">
+      <change beforePath="$PROJECT_DIR$/../neutral_semantic_retrieval/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/../neutral_semantic_retrieval/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../neutral_semantic_retrieval/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../neutral_semantic_retrieval/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -11,6 +14,7 @@
   <component name="Git.Settings">
     <option name="PREVIOUS_COMMIT_AUTHORS">
       <list>
+        <option value="hzyang95 &lt;oldyang95@hotmail.com&gt;" />
         <option value="hzyang95" />
       </list>
     </option>
@@ -223,12 +227,24 @@
       <option name="presentableId" value="Default" />
       <updated>1574932018863</updated>
       <workItem from="1574932020053" duration="4485000" />
-      <workItem from="1574943409838" duration="1011000" />
+      <workItem from="1574943409838" duration="1229000" />
     </task>
+    <task id="LOCAL-00001" summary="First commit">
+      <created>1574944507606</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1574944507606</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="First commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="First commit" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/bert_retrieval$test.coverage" NAME="test Coverage Results" MODIFIED="1574942035736" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="E:/迅雷下载/preprocessed" />
