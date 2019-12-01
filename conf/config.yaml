@@ -1,11 +1,22 @@
 path:
-  train_data: ../data/train.txt # 改为训练数据文件位置
+  train_data: ../data/doc.train.json # 改为训练数据文件位置
+  test_data: ../data/doc.dev.json
+  train_data_para: ../data/para.train.json # 改为训练数据文件位置
+  test_data_para: ../data/para.dev.json
   model_file: ../models/sample_ft.model # 改为模型所在位置
+
 params:
-  label_prefix: __label__ # fasttext的label前缀
+  gra: doc
   epoch: 500 # 训练轮次
+  intv: 2000
   thread: 5 # 训练使用的CPU数目
-  neg: 100 # 负样本的数量
+  choice: 1
+  chinese: bert-base-chinese
+  english: bert-base-uncased
+  hidden: 768
+  embedding: 768
+  res: 2
+  batch_size: 4
 serve:
   port: 12345 # 服务端口号
   n_process: 1 # 进程数

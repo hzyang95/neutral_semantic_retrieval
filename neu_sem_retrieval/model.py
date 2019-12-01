@@ -1,54 +1,76 @@
 import fasttext
 import logging
 from .utils import parse_config
-
+from pytorch_transformers import BertTokenizer,BertModel
+from typing import List
+import torch
+import torch.nn as nn
+import torch.nn.utils.rnn as rnn_utils
+import torch.nn.functional as F
 logger = logging.getLogger(__name__)
 
 
-class Classifier(object):
+class Classifier(nn.Module):
     def __init__(self, conf_file):
         """
         Args:
             conf_file: 配置文件，包括训练数据、模型位置等文件路径配置以及模型参数配置。
         """
+        super(Classifier,self).__init__()
         logger.info('parse config from: {}'.format(conf_file))
         conf = parse_config(conf_file)
         data_conf, params_conf = conf['path'], conf['params']
-        self.train_data = data_conf['train_data']
-        self.model_file = data_conf['model_file']
-        self.epoch = params_conf['epoch']
-        self.label_prefix = params_conf['label_prefix']
-        self.thread = params_conf['thread']
-        self.neg = params_conf['neg']
+        self.language = 'english'
+        if params_conf['choice'] == 1:
+            self.language = 'chinese'
+        self.embedding_dim = params_conf['embedding']
+        self.hidden_dim = params_conf['hidden']
+        self.res_dim = params_conf['res']
+        # self.tokenizer = BertTokenizer.from_pretrained(params_conf[self.language])
+        self.bertmodel = BertModel.from_pretrained(params_conf[self.language])
+        self.lstm = nn.LSTM(self.embedding_dim,self.hidden_dim, batch_first=True)
+        self.l1 = nn.Linear(self.hidden_dim,500)
+        self.l2 = nn.Linear(500, 250)
+        self.l3 = nn.Linear(250, 125)
+        self.l4 = nn.Linear(125, self.res_dim)
 
-    def train(self):
-        """
-        Returns:
+    # input_ids = torch.tensor(tokenizer.encode("你好")).unsqueeze(0)  # Batch size 1
+    # outputs = model(input_ids)
+    # last_hidden_states = outputs[0]
+    # print(last_hidden_states)
 
-        """
-        logger.info('begin training, model_file: {}'.format(self.model_file))
-        model = fasttext.supervised(
-            self.train_data, self.model_file, label_prefix=self.label_prefix,
-            epoch=self.epoch, thread=self.thread, neg=self.neg)
-        logger.info('end training')
-        logger.info('model saved to: {}'.format(self.model_file))
-        return model
+    def forward(self, input_ids,target,len):
+        # input_ids = [torch.tensor(self.tokenizer.encode(i[0])) for i in tokens]
+        # target = torch.tensor([i[1] for i in tokens])
+        # # print(input_ids)
+        # input_ids = rnn_utils.pad_sequence(input_ids, batch_first=True) #, batch_first=True
+        # print(input_ids)
+        # outputs = self.bert_model(input_ids)
+        # last_hidden_states = outputs[0]
+        # last_hidden_states = input_ids
+        # print(last_hidden_states)
+        # print(last_hidden_states.size())
+        # input_ids=rnn_utils.pack_padded_sequence(input_ids, len, batch_first=True,enforce_sorted=False)
+        # aftlstm, (hn, cn)=self.lstm(input_ids)
 
-    def _remove_label_prefix(self, label):
-        return label[len(self.label_prefix):]
+        # print(hn.size())
+        # print(hn)
+        # print(cn.size())
+        # print(aftlstm)
+        # aftlstm,out_len = rnn_utils.pad_packed_sequence(aftlstm, batch_first=True)
+        # print(aftlstm)
+        # print(aftlstm[:,-1,:])
+        # print(aftlstm[:, -1, :].size())
+        # aftlinear = self.l1(hn[-1,:,:])
+        # print(aftlinear.size())
+        # print(target.size())
+        # print(out)
+        # print(loss)
+        x = self.bertmodel(input_ids.cuda())[0]
+        # print(x)
+        x = F.relu(self.l1(x[:,0,:]))
+        x = F.relu(self.l2(x))
+        x = F.relu(self.l3(x))
+        x = self.l4(x)
+        return x
 
-    def predict(self, text):
-        """
-        Args:
-            text: 待预测的文本或文本列表
-        Returns:
-            预测的类别或类别列表
-        """
-        logger.info('model load from : {}'.format(self.model_file))
-        model = fasttext.load_model('{}.bin'.format(self.model_file))
-        if isinstance(text, list):
-            return [self._remove_label_prefix(i[0]) for i in model.predict(text)]
-        elif isinstance(text, str):
-            return self._remove_label_prefix(model.predict([text])[0][0])
-        else:
-            raise Exception("Invalid text type: {}!".format(type(text)))
