@@ -29,10 +29,14 @@ class Classifier(nn.Module):
         # self.tokenizer = BertTokenizer.from_pretrained(params_conf[self.language])
         self.bertmodel = BertModel.from_pretrained(params_conf[self.language])
         self.lstm = nn.LSTM(self.embedding_dim,self.hidden_dim, batch_first=True)
+        # self.l1 = nn.Linear(self.hidden_dim, self.res_dim)
+        # self.dropout = nn.Dropout(0.1)
+
         self.l1 = nn.Linear(self.hidden_dim,500)
         self.l2 = nn.Linear(500, 250)
         self.l3 = nn.Linear(250, 125)
         self.l4 = nn.Linear(125, self.res_dim)
+
 
     # input_ids = torch.tensor(tokenizer.encode("你好")).unsqueeze(0)  # Batch size 1
     # outputs = model(input_ids)
@@ -67,10 +71,14 @@ class Classifier(nn.Module):
         # print(out)
         # print(loss)
         x = self.bertmodel(input_ids.cuda())[0]
+
         # print(x)
         x = F.relu(self.l1(x[:,0,:]))
         x = F.relu(self.l2(x))
         x = F.relu(self.l3(x))
         x = self.l4(x)
+        
+        # x = self.dropout(x)
+        # x = self.l1(x[:, 0, :])
         return x
 

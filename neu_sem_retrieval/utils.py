@@ -33,7 +33,7 @@ def mkdata(tokenizer, tokens):
     te = 0
     ssss = []
     for i in tokens:
-        ssss.append(i[2])
+        ssss.append(float(i[2]))
         if i[2]==0:
             te+=1
     target = torch.tensor(ssss)

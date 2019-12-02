@@ -3,9 +3,10 @@ path:
   test_data: ../data/doc.dev.json
   train_data_para: ../data/para.train.json # 改为训练数据文件位置
   test_data_para: ../data/para.dev.json
-  model_file: ../models/sample_ft.model # 改为模型所在位置
+  model_file: ../models/sample_ft1.model # 改为模型所在位置
 
 params:
+  gpu: 0
   gra: doc
   epoch: 500 # 训练轮次
   intv: 2000
@@ -17,6 +18,7 @@ params:
   embedding: 768
   res: 2
   batch_size: 4
+  learning_rate: 5e-5
 serve:
   port: 12345 # 服务端口号
   n_process: 1 # 进程数
