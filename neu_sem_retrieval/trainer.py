@@ -1,5 +1,6 @@
 import fasttext
 import logging
+
 '''
 6191
 1173
@@ -11,20 +12,12 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn_utils
 import torch.utils.data.dataloader as DataLoader
-
 from allennlp.nn.util import move_to_device
-
 from neu_sem_retrieval.model import Classifier
-from neu_sem_retrieval.utils import parse_config,mkdata,subDataset,getData
-# from data.getdata import getData
-import numpy as np
-
+from neu_sem_retrieval.utils import parse_config, mkdata, subDataset, getData
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
-language='bert-base-uncased'
-# tokens = [['i am fine',1],['hello bro',1],['shit',0],['son of bitch',0],['very good',1],['sounds good',1],['holly shit',0]]
-# tokens = [['你好',1],['你特别好',1],['傻逼',0],['傻蛋',0],['厉害',1],['厉害',1],['傻吊',0]]
-from transformers import BertTokenizer,BertModel,BertForSequenceClassification,AdamW
+from transformers import BertTokenizer, BertModel, BertForSequenceClassification, AdamW
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +31,7 @@ class Trainer(object):
         logger.info('parse config from: {}'.format(conf_file))
         conf = parse_config(conf_file)
         data_conf, params_conf = conf['path'], conf['params']
-        self.train_data,self.test_data = getData(conf_file)
+        self.train_data, self.test_data = getData(conf_file)
         self.model_file = data_conf['model_file']
         self.epoch = params_conf['epoch']
         self.batch_size = params_conf['batch_size']
@@ -50,14 +43,15 @@ class Trainer(object):
         self.model = BertForSequenceClassification.from_pretrained(params_conf[self.language], num_labels=1)
         self.device_num = params_conf['gpu']
         self.device = 'cpu'
-        if self.device_num>=0:
+        if self.device_num >= 0:
             self.device = 'cuda'
+
     def train(self):
         """
         Returns:
         """
         self.model.to(self.device)
-        logger.info('begin training, model_file: {}, gpu: {}'.format(self.model_file,self.device_num))
+        logger.info('begin training, model_file: {}, gpu: {}'.format(self.model_file, self.device_num))
         # print(tokenizer.tokenize('if sub_text not in self.added_tokens_encoder '))
         train, target_train, len_list_train = mkdata(self.tokenizer, self.train_data)
         test, target_test, len_list_test = mkdata(self.tokenizer, self.test_data)
@@ -71,8 +65,8 @@ class Trainer(object):
         # print(dataset)
         tr = dataset_train.__len__()
         intv = dataset_test.__len__()
-        print('train dataset大小为：', tr)
-        print('test dataset大小为：', intv)
+        logger.info('train dataset大小为：', tr)
+        logger.info('test dataset大小为：', intv)
         # print(dataset.__getitem__(0))
         # print(dataset[0])
 
@@ -95,15 +89,15 @@ class Trainer(object):
         ]
         # optimizer = optim.SGD(params)
         optimizer = AdamW(optimizer_grouped_parameters,
-                             lr=5e-5)
-        softmax = nn.Softmax()
+                          lr=5e-5)
+        # softmax = nn.Softmax()
         sigmoid = nn.Sigmoid()
         criterion = nn.CrossEntropyLoss()
         for epoch in range(self.epoch):
-            print('-----' + str(epoch))
+            logger.info('-----' + str(epoch))
             rp = 0
             for i, item in enumerate(dataloader_train):
-                item = move_to_device(item,self.device_num)
+                item = move_to_device(item, self.device_num)
                 # print('i:', i)
                 data, label, len_ = item
                 #
@@ -129,9 +123,9 @@ class Trainer(object):
                 loss.backward()
                 optimizer.step()
                 # ind  = torch.tensor([0 if i[0]<0.5 else 1 for i in res])
-                topk = torch.topk(res, int(self.batch_size/2), dim=0)
-                ind = [0]*self.batch_size
-                for ii in topk[1]:
+                tops = torch.topk(res, int(self.batch_size / 2), dim=0)
+                ind = [0] * self.batch_size
+                for ii in tops[1]:
                     ind[ii[0]] = 1
                 ind = torch.tensor(ind).to(self.device)
                 # # ind = torch.argmax(res, dim=1).to(self.device)
@@ -140,21 +134,21 @@ class Trainer(object):
                 p = (ind == label).sum()
                 rp += p.item()
                 if i % 20 == 0:
-                    print(str(label)+str(ind))
-                    print('-' + str(i) + ' ' + str(loss))
-            print(float(rp) / tr)
+                    logger.info(str(label) + str(ind))
+                    logger.info('-' + str(i) + ' ' + str(loss))
+            logger.info(float(rp) / tr)
             rp = 0
-            print('eval..')
-            pr=self.eval(self.model,dataloader_test)
-            print(pr)
-            if (epoch%20==0):
-                save_dir='../models/new_epoch_'+str(epoch)+'_pr_'+str(pr)
-                torch.save(self.model,save_dir)
+            logger.info('eval..')
+            pr = self.eval(self.model, dataloader_test, intv)
+            logger.info(pr)
+            if epoch % 20 == 0:
+                save_dir = '../models/new_epoch_' + str(epoch) + '_pr_' + str(pr)
+                torch.save(self.model, save_dir)
                 logger.info('model saved to: {}'.format(self.model_file))
         logger.info('end training')
         return self.model
 
-    def eval(self,cls, dataloader_test):
+    def eval(self, cls, dataloader_test, intv):
         rp = 0
         for i, item in enumerate(dataloader_test):
             # print('i:', i)
@@ -164,17 +158,17 @@ class Trainer(object):
             # print('data:', data)
             # print('label:', label)
             # data = bertmodel(data.cuda())[0]
-            cls.eval()
-            outputs = self.model(data, label, len_)
+            self.model.eval()
+            outputs = self.model(data, labels=label)
             loss, res = outputs[:2]
-            softmax = nn.Softmax()
+            # softmax = nn.Softmax()
             sigmoid = nn.Sigmoid()
             res = sigmoid(res)
             # print(res)
             # ind = torch.tensor([0 if i[0] < 0.5 else 1 for i in res])
-            topk = torch.topk(res, self.batch_size / 2, dim=0)
+            tops = torch.topk(res, int(self.batch_size / 2), dim=0)
             ind = [0] * self.batch_size
-            for ii in topk[1]:
+            for ii in tops[1]:
                 ind[ii[0]] = 1
             ind = torch.tensor(ind).to(self.device)
             # print(out)
@@ -185,6 +179,6 @@ class Trainer(object):
             p = (ind == label).sum()
             rp += p.item()
             if i % 20 == 0:
-                print(str(label)+str(ind))
-                print('-' + str(i) + ' ' + str(loss))
-        return (float(rp) / (-1 * intv))
+                logger.info(str(label) + str(ind))
+                logger.info('-' + str(i) + ' ' + str(loss))
+        return float(rp) / float(intv)

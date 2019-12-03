@@ -1,6 +1,7 @@
 path:
   train_data: ../data/doc.train.json # 改为训练数据文件位置
   test_data: ../data/doc.dev.json
+  test_data_new: ../data/version2.doc.dev.json
   train_data_para: ../data/para.train.json # 改为训练数据文件位置
   test_data_para: ../data/para.dev.json
   model_file: ../models/sample_ft1.model # 改为模型所在位置
