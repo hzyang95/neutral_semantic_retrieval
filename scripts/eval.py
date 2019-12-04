@@ -63,12 +63,12 @@ def eval(cls, dataloader_test, tokenizer):
         test = move_to_device(test, device_num)
         target = move_to_device(target, device_num)
 
-        cls.train()
+        cls.eval()
 
         outputs = cls(test, labels=target)
         loss, res = outputs[:2]
         # print(outputs)
-        # print(res)
+        print(res)
         sigmoid = nn.Sigmoid()
         res = sigmoid(res)
 
@@ -81,8 +81,8 @@ def eval(cls, dataloader_test, tokenizer):
         # print(out)
         # ind = torch.argmax(out, dim=1)
         # print('++++++++++')
-
-        tops = torch.topk(res, min(3, b_l), dim=0)
+        # min(2, b_l)
+        tops = torch.topk(res,min(2, b_l) , dim=0)
         ind = [0] * b_l
         for ii in tops[1]:
             ind[ii[0]] = 1
@@ -114,7 +114,12 @@ def eval(cls, dataloader_test, tokenizer):
 # print(temp)
 
 if __name__ == '__main__':
-    save_dir = '../models/new_epoch_60_pr_0.5045'
+    # save_dir = '../models/new_epoch_60_pr_0.5045'
+    # save_dir = '../models/new_epoch_40_pr_0.4935'
+    # save_dir = '../models/new_epoch_80_pr_0.4935'
+    # save_dir = '../models/zhidao_new_epoch_20_pr_-0.507057546145494'
+    save_dir = '../models/doc_5000_epoch_140_pr_-0.5200868621064061'
+
     cls = torch.load(save_dir)
     cls.to(device)
 

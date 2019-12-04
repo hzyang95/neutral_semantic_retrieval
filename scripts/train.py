@@ -11,4 +11,4 @@ from neu_sem_retrieval.trainer import Trainer  # noqa
 if __name__ == '__main__':
     conf_file = os.path.join(CUR_PATH, '../conf/config.yaml')
     clf = Trainer(conf_file)
-    clf.train()
+    clf.train_retr()

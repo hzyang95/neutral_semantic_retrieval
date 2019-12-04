@@ -6,11 +6,16 @@ stage = _stage[1]
 _obj = ['doc', 'para']
 obj = _obj[0]
 
-first_num = 3000
 
-file_path = '../../../preprocessed/' + stage + 'set/search.' + stage + '.json'
+_source =['search','zhidao']
+source = _source[1]
 
-save_path = '../../data/version2.' + obj + '.' + stage + '.json'
+
+first_num = 20000
+
+file_path = '../../../preprocessed/' + stage + 'set/'+ source +'.' + stage + '.json'
+
+save_path = '../../data/version2.' + obj + '.' + source +'.' + stage + '.json'
 
 file = []
 with open(file_path, 'r', encoding='utf-8') as f:

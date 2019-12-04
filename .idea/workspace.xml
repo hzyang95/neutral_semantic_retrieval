@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="50c948d7-1204-4f75-9176-12a90c65d686" name="Default Changelist" comment="Fixed based on Nie code">
-      <change afterPath="$PROJECT_DIR$/scripts/data/data_preprocess_v1.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="50c948d7-1204-4f75-9176-12a90c65d686" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/conf/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/conf/config.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/neu_sem_retrieval/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/neu_sem_retrieval/trainer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/neu_sem_retrieval/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/neu_sem_retrieval/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/data/data_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/data/data_analysis.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/data/data_preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/data/data_preprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/data/data_preprocess_v1.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/data/data_preprocess_v1.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/eval.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/train.py" afterDir="false" />
     </list>
@@ -56,7 +56,7 @@
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../semanticRetrievalMRS-master" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/models" />
     <property name="settings.editor.selected.configurable" value="reference.settings.deploy.options" />
   </component>
   <component name="RecentsManager">
@@ -66,6 +66,7 @@
       <recent name="E:\CS\project\bert_retrieval\data" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\CS\project\neutral_semantic_retrieval\models" />
       <recent name="E:\CS\project\neutral_semantic_retrieval\data" />
       <recent name="E:\CS\project\neutral_semantic_retrieval" />
       <recent name="E:\CS\project\neutral_semantic_retrieval\neu_sem_retrieval" />
@@ -128,6 +129,28 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="data_preprocess_v1" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="neutral_semantic_retrieval" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/scripts/data" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/data/data_preprocess_v1.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="eval" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="neutral_semantic_retrieval" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -142,28 +165,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/eval.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="train" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="neutral_semantic_retrieval" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/scripts" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/train.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -197,10 +198,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.eval" />
-        <item itemvalue="Python.data_analysis" />
-        <item itemvalue="Python.data_preprocess" />
-        <item itemvalue="Python.train" />
         <item itemvalue="Python.trainer" />
+        <item itemvalue="Python.data_preprocess" />
+        <item itemvalue="Python.data_preprocess_v1" />
+        <item itemvalue="Python.data_analysis" />
       </list>
     </recent_temporary>
   </component>
@@ -219,7 +220,7 @@
       <workItem from="1575185655516" duration="158000" />
       <workItem from="1575186229471" duration="462000" />
       <workItem from="1575186701601" duration="23218000" />
-      <workItem from="1575253484329" duration="44493000" />
+      <workItem from="1575253484329" duration="68703000" />
     </task>
     <task id="LOCAL-00001" summary="First commit">
       <created>1574944507606</created>
@@ -256,7 +257,14 @@
       <option name="project" value="LOCAL" />
       <updated>1575290639974</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Eval dataset">
+      <created>1575352195516</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1575352195516</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -280,18 +288,20 @@
     <MESSAGE value="Initialize" />
     <MESSAGE value="First version" />
     <MESSAGE value="Fixed based on Nie code" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed based on Nie code" />
+    <MESSAGE value="Eval dataset" />
+    <option name="LAST_COMMIT_MESSAGE" value="Eval dataset" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_preprocess.coverage" NAME="data_preprocess Coverage Results" MODIFIED="1575300909839" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
-    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$eval.coverage" NAME="eval Coverage Results" MODIFIED="1575351887487" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
-    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_analysis.coverage" NAME="data_analysis Coverage Results" MODIFIED="1575342622850" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
+    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_preprocess_v1.coverage" NAME="data_preprocess_v1 Coverage Results" MODIFIED="1575353532075" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
+    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_preprocess.coverage" NAME="data_preprocess Coverage Results" MODIFIED="1575353597684" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
+    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$eval.coverage" NAME="eval Coverage Results" MODIFIED="1575429733909" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
+    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_analysis.coverage" NAME="data_analysis Coverage Results" MODIFIED="1575353038221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$utils.coverage" NAME="utils Coverage Results" MODIFIED="1575004833775" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/neu_sem_retrieval" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$model.coverage" NAME="model Coverage Results" MODIFIED="1575012422328" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/neu_sem_retrieval" />
     <SUITE FILE_PATH="coverage/bert_retrieval$test.coverage" NAME="test Coverage Results" MODIFIED="1574942035736" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="E:/迅雷下载/preprocessed" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_mkdataset.coverage" NAME="data_mkdataset Coverage Results" MODIFIED="1575181779043" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$dataset_analysis.coverage" NAME="dataset_analysis Coverage Results" MODIFIED="1574945272542" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
-    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$trainer.coverage" NAME="trainer Coverage Results" MODIFIED="1575270704653" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/neu_sem_retrieval" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$train.coverage" NAME="train Coverage Results" MODIFIED="1575295512683" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
+    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$trainer.coverage" NAME="trainer Coverage Results" MODIFIED="1575363339603" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/neu_sem_retrieval" />
   </component>
 </project>

@@ -1,4 +1,4 @@
-# NLP项目模板
+# neutral_semantic_retrieval
 
 ```
 |-- conf                    # 配置文件所在目录

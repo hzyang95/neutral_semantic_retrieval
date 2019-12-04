@@ -8,7 +8,7 @@ obj = _obj[0]
 
 first_num = 3000
 
-file_path = '../../../preprocessed/' + stage + 'set/search.' + stage + '.json'
+file_path = '../../../preprocessed/' + stage + 'set/zhidao.' + stage + '.json'
 
 file = []
 with open(file_path, 'r', encoding='utf-8') as f:

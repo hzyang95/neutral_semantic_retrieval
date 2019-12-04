@@ -29,7 +29,6 @@ def mkdata(tokenizer, tokens):
         # print(tos)
         temp = tokenizer.convert_tokens_to_ids(tos)
         input_ids.append(torch.tensor(temp))
-        len_list.append(len(temp))
     te = 0
     ssss = []
     for i in tokens:
@@ -38,7 +37,7 @@ def mkdata(tokenizer, tokens):
             te+=1
     target = torch.tensor(ssss)
     print(te)
-    return input_ids, target, len_list
+    return input_ids, target
 
 def mktestdata(tokenizer, tokens):
     # input_ids = [torch.tensor(tokenizer.encode(' '.join(i[0].strip().split(' |\n')[:512]))) for i in tokens]
@@ -65,10 +64,9 @@ def mktestdata(tokenizer, tokens):
 
 class subDataset(Dataset.Dataset):
     # 初始化，定义数据内容和标签
-    def __init__(self, Data, Label, Len):
+    def __init__(self, Data, Label):
         self.Data = Data
         self.Label = Label
-        self.Len = Len
 
     # 返回数据集大小
     def __len__(self):
@@ -78,8 +76,7 @@ class subDataset(Dataset.Dataset):
     def __getitem__(self, index):
         data = self.Data[index]
         label = self.Label[index]
-        len_ = self.Len[index]
-        return data, label, len_
+        return data, label
 
 
 def getData(conf_file):
@@ -100,22 +97,22 @@ def getData(conf_file):
     file = []
     with open(train_path, 'r', encoding='utf-8') as f:
         file += f.readlines()
-    for line in file[:10000]:
+    for line in file[:5000]:
         js = json.loads(line)
         # print(js['text'])
         # print(js['question'])
         # print(js['label'])
         train_data.append([js['text'], js['question'], js['label']])
+    #
+    # file = []
+    # with open(test_path, 'r', encoding='utf-8') as f:
+    #     file += f.readlines()
+    # sss= intv/10
+    # for line in file[:2000]:
+    #     js = json.loads(line)
+    #     test_data.append([js['text'], js['question'], js['label']])
 
-    file = []
-    with open(test_path, 'r', encoding='utf-8') as f:
-        file += f.readlines()
-    sss= intv/10
-    for line in file[:2000]:
-        js = json.loads(line)
-        test_data.append([js['text'], js['question'], js['label']])
-
-    return train_data, test_data
+    return train_data#, test_data
 
 # print([1,2,3,4,5][:2])
 
@@ -131,7 +128,7 @@ def getTestData(conf_file):
     file = []
     with open(test_path, 'r', encoding='utf-8') as f:
         file += f.readlines()
-    for line in file[:100]:
+    for line in file[:200]:
         js = json.loads(line)
         samples = []
         for item in js['sample']:

@@ -1,11 +1,9 @@
-import fasttext
 import logging
 
 '''
 6191
 1173
 '''
-import torch.optim as optim
 import os
 import sys
 import torch
@@ -14,10 +12,10 @@ import torch.nn.utils.rnn as rnn_utils
 import torch.utils.data.dataloader as DataLoader
 from allennlp.nn.util import move_to_device
 from neu_sem_retrieval.model import Classifier
-from neu_sem_retrieval.utils import parse_config, mkdata, subDataset, getData
+from neu_sem_retrieval.utils import parse_config, mkdata, subDataset, getData,getTestData,mktestdata
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
-from transformers import BertTokenizer, BertModel, BertForSequenceClassification, AdamW
+from transformers import BertTokenizer, BertModel, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,8 @@ class Trainer(object):
         logger.info('parse config from: {}'.format(conf_file))
         conf = parse_config(conf_file)
         data_conf, params_conf = conf['path'], conf['params']
-        self.train_data, self.test_data = getData(conf_file)
+        self.train_data = getData(conf_file)
+        self.test_data = getTestData(conf_file)
         self.model_file = data_conf['model_file']
         self.epoch = params_conf['epoch']
         self.batch_size = params_conf['batch_size']
@@ -46,36 +45,36 @@ class Trainer(object):
         if self.device_num >= 0:
             self.device = 'cuda'
 
-    def train(self):
+    def train_retr(self):
         """
         Returns:
         """
         self.model.to(self.device)
         logger.info('begin training, model_file: {}, gpu: {}'.format(self.model_file, self.device_num))
         # print(tokenizer.tokenize('if sub_text not in self.added_tokens_encoder '))
-        train, target_train, len_list_train = mkdata(self.tokenizer, self.train_data)
-        test, target_test, len_list_test = mkdata(self.tokenizer, self.test_data)
+        train, target_train = mkdata(self.tokenizer, self.train_data)
+        # test, target_test, len_list_test = mkdata(self.tokenizer, self.test_data)
         # print(target_train)
         # print(input_ids[:10])
         # bertmodel = BertModel.from_pretrained(language).cuda()
         train = rnn_utils.pad_sequence(train, batch_first=True)  # , batch_first=True
-        test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
-        dataset_train = subDataset(train, target_train, len_list_train)
-        dataset_test = subDataset(test, target_test, len_list_test)
+        # test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
+        dataset_train = subDataset(train, target_train)
+        # dataset_test = subDataset(test, target_test, len_list_test)
         # print(dataset)
         tr = dataset_train.__len__()
-        intv = dataset_test.__len__()
-        logger.info('train dataset大小为：', tr)
-        logger.info('test dataset大小为：', intv)
+        # intv = dataset_test.__len__()
+        logger.info('train dataset大小为：{}'.format(tr))
+        # logger.info('test dataset大小为：', intv)
         # print(dataset.__getitem__(0))
         # print(dataset[0])
 
         # 创建DataLoader迭代器
         dataloader_train = DataLoader.DataLoader(dataset_train, batch_size=self.batch_size, shuffle=True, num_workers=4)
-        dataloader_test = DataLoader.DataLoader(dataset_test, batch_size=self.batch_size, shuffle=False, num_workers=4)
+        # dataloader_test = DataLoader.DataLoader(dataset_test, batch_size=self.batch_size, shuffle=False, num_workers=4)
         # print(self.model.parameters())
-        # base_params = list(map(id, self.model.bert.parameters()))
-        # logits_params = filter(lambda p: id(p) not in base_params, self.model.parameters())
+        base_params = list(map(id, self.model.bert.parameters()))
+        logits_params = filter(lambda p: id(p) not in base_params, self.model.parameters())
         # params = [
         #     {"params": logits_params, "lr": 0.01},
         #     {"params": self.model.bert.parameters(), "lr": 1e-5},
@@ -88,24 +87,20 @@ class Trainer(object):
             {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
         # optimizer = optim.SGD(params)
-        optimizer = AdamW(optimizer_grouped_parameters,
-                          lr=5e-5)
+        # optimizer = AdamW(params, warmup=0.1)
+        optimizer =  AdamW(optimizer_grouped_parameters,lr=1e-5)
+        scheduler = get_linear_schedule_with_warmup(optimizer, 20000, 200000)
         # softmax = nn.Softmax()
         sigmoid = nn.Sigmoid()
         criterion = nn.CrossEntropyLoss()
+        ma = 0
         for epoch in range(self.epoch):
             logger.info('-----' + str(epoch))
             rp = 0
             for i, item in enumerate(dataloader_train):
                 item = move_to_device(item, self.device_num)
                 # print('i:', i)
-                data, label, len_ = item
-                #
-                # print('data:', data)
-                # print('label:', label)
-
-                # print('dataaftbert:', data.shape)
-                # data = rnn_utils.pack_padded_sequence(data, len, batch_first=True,enforce_sorted=False)
+                data, label = item
                 optimizer.zero_grad()  # zero the gradient buffers
                 self.model.train()
                 # print(data.size())
@@ -122,6 +117,7 @@ class Trainer(object):
                 # print(loss)
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
                 # ind  = torch.tensor([0 if i[0]<0.5 else 1 for i in res])
                 tops = torch.topk(res, int(self.batch_size / 2), dim=0)
                 ind = [0] * self.batch_size
@@ -139,46 +135,125 @@ class Trainer(object):
             logger.info(float(rp) / tr)
             rp = 0
             logger.info('eval..')
-            pr = self.eval(self.model, dataloader_test, intv)
+            pr = self.eval_retr(self.model, self.test_data)
             logger.info(pr)
-            if epoch % 20 == 0:
-                save_dir = '../models/new_epoch_' + str(epoch) + '_pr_' + str(pr)
+            if pr>ma:
+                ma=pr
+                save_dir = '../models/doc_5000_warm_best'
                 torch.save(self.model, save_dir)
-                logger.info('model saved to: {}'.format(self.model_file))
+                with open('best.txt','w',encoding='utf-8') as ff:
+                    ff.write(str(epoch))
+                    ff.write('\n')
+                    ff.write(str(pr))
+                logger.info('best model saved to: {}'.format(self.model_file))
+            if epoch % 20 == 0:
+                save_dir = '../models/doc_5000_warm_epoch_' + str(epoch) + '_pr_' + str(pr)
+                torch.save(self.model, save_dir)
+                logger.info('model saved to: {}'.format(save_dir))
         logger.info('end training')
         return self.model
 
-    def eval(self, cls, dataloader_test, intv):
+    def eval_retr(self, cls, dataloader_test):
         rp = 0
+        intv = 0
+
+        r_t = []
+        i_t = []
         for i, item in enumerate(dataloader_test):
+            # item = move_to_device(item, device_num)
             # print('i:', i)
-            item = move_to_device(item, self.device_num)
-            data, label, len_ = item
+            # data, label, len_ = item
             #
             # print('data:', data)
             # print('label:', label)
             # data = bertmodel(data.cuda())[0]
-            self.model.eval()
-            outputs = self.model(data, labels=label)
-            loss, res = outputs[:2]
+            test, target, tops = mktestdata(self.tokenizer, item)
+            # print(target_train)
+            # print(input_ids[:10])
+            # bertmodel = BertModel.from_pretrained(language).cuda()
+            # train = rnn_utils.pad_sequence(train, batch_first=True)  # , batch_first=True
+            b_l = len(test)
+            intv += b_l
+
+            test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
+            dataset_test = subDataset(test, target)
+            _dataloader_test = DataLoader.DataLoader(dataset_test, batch_size=self.batch_size, shuffle=False,
+                                                    num_workers=4)
+
+            # test.to(device)
+            # target.to(device)
+            cls.eval()
+
+            loss = []
+            res = []
+
+            for id,it in enumerate(_dataloader_test):
+                it = move_to_device(it, self.device_num)
+                test,target_l = it
+                outputs = cls(test, labels=target_l)
+                loss, res_1 = outputs[:2]
+                sigmoid = nn.Sigmoid()
+                res_1 = sigmoid(res_1).tolist()
+                res += res_1
+            res=torch.tensor(res)
+            # res = cls(test, target, tops)
             # softmax = nn.Softmax()
-            sigmoid = nn.Sigmoid()
-            res = sigmoid(res)
-            # print(res)
-            # ind = torch.tensor([0 if i[0] < 0.5 else 1 for i in res])
-            tops = torch.topk(res, int(self.batch_size / 2), dim=0)
-            ind = [0] * self.batch_size
+            # criterion = nn.CrossEntropyLoss()
+            # out = softmax(res)
+            # loss = criterion(res, target)
+
+            # print(out)
+            # ind = torch.argmax(out, dim=1)
+            # print('++++++++++')
+            # min(2, b_l)
+            tops = torch.topk(res, min(3, b_l), dim=0)
+            ind = [0] * b_l
             for ii in tops[1]:
                 ind[ii[0]] = 1
             ind = torch.tensor(ind).to(self.device)
-            # print(out)
-            # ind = torch.argmax(res, dim=1).to(self.device)
-            # print('++++++++++')
-            # print(label)
+            # print(res)
+            # print(target)
             # print(ind)
-            p = (ind == label).sum()
+            r_t += target.tolist()
+            i_t += ind.tolist()
+            target=move_to_device(target,self.device_num)
+            p = (ind == target).sum()
             rp += p.item()
             if i % 20 == 0:
-                logger.info(str(label) + str(ind))
                 logger.info('-' + str(i) + ' ' + str(loss))
-        return float(rp) / float(intv)
+        return (float(rp) / float(intv))#, r_t, i_t
+
+    # def eval(self, cls, dataloader_test, intv):
+    #     rp = 0
+    #     for i, item in enumerate(dataloader_test):
+    #         # print('i:', i)
+    #         item = move_to_device(item, self.device_num)
+    #         data, label, len_ = item
+    #         #
+    #         # print('data:', data)
+    #         # print('label:', label)
+    #         # data = bertmodel(data.cuda())[0]
+    #         cls.eval()
+    #         outputs = cls(data, labels=label)
+    #         loss, res = outputs[:2]
+    #         # softmax = nn.Softmax()
+    #         sigmoid = nn.Sigmoid()
+    #         res = sigmoid(res)
+    #         # print(res)
+    #         # ind = torch.tensor([0 if i[0] < 0.5 else 1 for i in res])
+    #         tops = torch.topk(res, int(self.batch_size / 2), dim=0)
+    #         ind = [0] * self.batch_size
+    #         for ii in tops[1]:
+    #             ind[ii[0]] = 1
+    #         ind = torch.tensor(ind).to(self.device)
+    #         # print(out)
+    #         # ind = torch.argmax(res, dim=1).to(self.device)
+    #         # print('++++++++++')
+    #         # print(label)
+    #         # print(ind)
+    #         p = (ind == label).sum()
+    #         rp += p.item()
+    #         if i % 20 == 0:
+    #             logger.info(str(label) + str(ind))
+    #             logger.info('-' + str(i) + ' ' + str(loss))
+    #     return float(rp) / float(intv)
