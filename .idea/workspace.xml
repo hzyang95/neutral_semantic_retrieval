@@ -2,14 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="50c948d7-1204-4f75-9176-12a90c65d686" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/neutral_semantic_retrieval.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/neutral_semantic_retrieval.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/conf/config.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/neu_sem_retrieval/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/neu_sem_retrieval/trainer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/neu_sem_retrieval/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/neu_sem_retrieval/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/data/data_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/data/data_analysis.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/data/data_preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/data/data_preprocess.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/data/data_preprocess_v1.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/data/data_preprocess_v1.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scripts/eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/eval.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/train.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -56,7 +56,7 @@
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/models" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../semanticRetrievalMRS-master" />
     <property name="settings.editor.selected.configurable" value="reference.settings.deploy.options" />
   </component>
   <component name="RecentsManager">
@@ -84,7 +84,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.eval">
+  <component name="RunManager" selected="Python.data_preprocess_v1">
     <configuration name="data_analysis" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="neutral_semantic_retrieval" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -197,10 +197,10 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.data_preprocess_v1" />
         <item itemvalue="Python.eval" />
         <item itemvalue="Python.trainer" />
         <item itemvalue="Python.data_preprocess" />
-        <item itemvalue="Python.data_preprocess_v1" />
         <item itemvalue="Python.data_analysis" />
       </list>
     </recent_temporary>
@@ -220,7 +220,10 @@
       <workItem from="1575185655516" duration="158000" />
       <workItem from="1575186229471" duration="462000" />
       <workItem from="1575186701601" duration="23218000" />
-      <workItem from="1575253484329" duration="68703000" />
+      <workItem from="1575253484329" duration="69486000" />
+      <workItem from="1575468838413" duration="9392000" />
+      <workItem from="1575514208745" duration="4303000" />
+      <workItem from="1575563066987" duration="4729000" />
     </task>
     <task id="LOCAL-00001" summary="First commit">
       <created>1574944507606</created>
@@ -264,7 +267,14 @@
       <option name="project" value="LOCAL" />
       <updated>1575352195516</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Update eval function &amp; save function">
+      <created>1575459891951</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1575459891951</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -289,12 +299,13 @@
     <MESSAGE value="First version" />
     <MESSAGE value="Fixed based on Nie code" />
     <MESSAGE value="Eval dataset" />
-    <option name="LAST_COMMIT_MESSAGE" value="Eval dataset" />
+    <MESSAGE value="Update eval function &amp; save function" />
+    <option name="LAST_COMMIT_MESSAGE" value="Update eval function &amp; save function" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_preprocess_v1.coverage" NAME="data_preprocess_v1 Coverage Results" MODIFIED="1575353532075" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
+    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_preprocess_v1.coverage" NAME="data_preprocess_v1 Coverage Results" MODIFIED="1575566373950" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_preprocess.coverage" NAME="data_preprocess Coverage Results" MODIFIED="1575353597684" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
-    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$eval.coverage" NAME="eval Coverage Results" MODIFIED="1575429733909" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
+    <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$eval.coverage" NAME="eval Coverage Results" MODIFIED="1575527965821" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$data_analysis.coverage" NAME="data_analysis Coverage Results" MODIFIED="1575353038221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/scripts/data" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$utils.coverage" NAME="utils Coverage Results" MODIFIED="1575004833775" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/neu_sem_retrieval" />
     <SUITE FILE_PATH="coverage/neutral_semantic_retrieval$model.coverage" NAME="model Coverage Results" MODIFIED="1575012422328" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/neu_sem_retrieval" />

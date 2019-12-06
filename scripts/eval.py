@@ -82,7 +82,7 @@ def eval(cls, dataloader_test, tokenizer):
         # ind = torch.argmax(out, dim=1)
         # print('++++++++++')
         # min(2, b_l)
-        tops = torch.topk(res,min(2, b_l) , dim=0)
+        tops = torch.topk(res,min(3, b_l) , dim=0)
         ind = [0] * b_l
         for ii in tops[1]:
             ind[ii[0]] = 1
@@ -116,9 +116,9 @@ def eval(cls, dataloader_test, tokenizer):
 if __name__ == '__main__':
     # save_dir = '../models/new_epoch_60_pr_0.5045'
     # save_dir = '../models/new_epoch_40_pr_0.4935'
-    # save_dir = '../models/new_epoch_80_pr_0.4935'
-    # save_dir = '../models/zhidao_new_epoch_20_pr_-0.507057546145494'
-    save_dir = '../models/doc_5000_epoch_140_pr_-0.5200868621064061'
+    # save_dir = '../models/doc_5000_warm_epoch_0_pr_0.507057546145494'
+    # save_dir = '../models/doc_5000_epoch_120_pr_-0.5504885993485342'
+    save_dir = '../models/doc_5000_warm_best'
 
     cls = torch.load(save_dir)
     cls.to(device)

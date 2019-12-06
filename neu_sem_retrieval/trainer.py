@@ -80,148 +80,106 @@ class Trainer(object):
         #     {"params": self.model.bert.parameters(), "lr": 1e-5},
         # ]
 
-        param_optimizer = list(self.model.named_parameters())
-        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+        # param_optimizer = list(self.model.named_parameters())
+        # no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+            # {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+            # {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0},
+            {"params": logits_params, "lr": 0.1},
+            {"params": self.model.bert.parameters(), "lr": 1e-5},
         ]
         # optimizer = optim.SGD(params)
         # optimizer = AdamW(params, warmup=0.1)
-        optimizer =  AdamW(optimizer_grouped_parameters,lr=1e-5)
-        scheduler = get_linear_schedule_with_warmup(optimizer, 20000, 200000)
+        optimizer = AdamW(optimizer_grouped_parameters)
+        scheduler = get_linear_schedule_with_warmup(optimizer, 10000, 100000)
         # softmax = nn.Softmax()
         sigmoid = nn.Sigmoid()
         criterion = nn.CrossEntropyLoss()
         ma = 0
+        _losss=1000000
         for epoch in range(self.epoch):
             logger.info('-----' + str(epoch))
-            rp = 0
+            acloss=torch.tensor(float(0))
             for i, item in enumerate(dataloader_train):
                 item = move_to_device(item, self.device_num)
                 # print('i:', i)
                 data, label = item
                 optimizer.zero_grad()  # zero the gradient buffers
                 self.model.train()
-                # print(data.size())
-                # print(label.size())
                 outputs = self.model(data, labels=label)
                 loss, res = outputs[:2]
-                # print(outputs)
-                # print(res)
-                res = sigmoid(res)
-                # print(res)
-                # print(res.size())
-                # print(softmax(res))
-                # print('---------')
-                # print(loss)
+                acloss += loss
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
-                # ind  = torch.tensor([0 if i[0]<0.5 else 1 for i in res])
-                tops = torch.topk(res, int(self.batch_size / 2), dim=0)
-                ind = [0] * self.batch_size
-                for ii in tops[1]:
-                    ind[ii[0]] = 1
-                ind = torch.tensor(ind).to(self.device)
-                # # ind = torch.argmax(res, dim=1).to(self.device)
-                # print(label)
-                # print(ind)
-                p = (ind == label).sum()
-                rp += p.item()
-                if i % 20 == 0:
-                    logger.info(str(label) + str(ind))
+                if i % 100 == 0:
                     logger.info('-' + str(i) + ' ' + str(loss))
-            logger.info(float(rp) / tr)
-            rp = 0
+
+            logger.info(str(acloss))
             logger.info('eval..')
-            pr = self.eval_retr(self.model, self.test_data)
+            pr,losss = self.eval_retr(self.model, self.test_data)
             logger.info(pr)
-            if pr>ma:
-                ma=pr
-                save_dir = '../models/doc_5000_warm_best'
+            logger.info(losss)
+            if losss<_losss:
+                _losss=losss
+                save_dir = '../models/para_10000_500_warm_best'
                 torch.save(self.model, save_dir)
-                with open('best.txt','w',encoding='utf-8') as ff:
+                with open('best_10000_500_para.txt','w',encoding='utf-8') as ff:
                     ff.write(str(epoch))
                     ff.write('\n')
-                    ff.write(str(pr))
+                    ff.write(str(losss))
                 logger.info('best model saved to: {}'.format(self.model_file))
-            if epoch % 20 == 0:
-                save_dir = '../models/doc_5000_warm_epoch_' + str(epoch) + '_pr_' + str(pr)
+            if epoch % 100 == 0:
+                save_dir = '../models/para_10000_500_warm_epoch_' + str(epoch) + '_loss_' + str(losss)
                 torch.save(self.model, save_dir)
                 logger.info('model saved to: {}'.format(save_dir))
         logger.info('end training')
         return self.model
 
     def eval_retr(self, cls, dataloader_test):
+        losss = torch.tensor(float(0))
         rp = 0
         intv = 0
-
         r_t = []
         i_t = []
-        for i, item in enumerate(dataloader_test):
-            # item = move_to_device(item, device_num)
-            # print('i:', i)
-            # data, label, len_ = item
-            #
-            # print('data:', data)
-            # print('label:', label)
-            # data = bertmodel(data.cuda())[0]
-            test, target, tops = mktestdata(self.tokenizer, item)
-            # print(target_train)
-            # print(input_ids[:10])
-            # bertmodel = BertModel.from_pretrained(language).cuda()
-            # train = rnn_utils.pad_sequence(train, batch_first=True)  # , batch_first=True
-            b_l = len(test)
-            intv += b_l
+        with torch.no_grad():
+            for i, item in enumerate(dataloader_test):
+                test, target, tops = mktestdata(self.tokenizer, item)
+                b_l = len(test)
+                intv += b_l
+                test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
+                dataset_test = subDataset(test, target)
+                _dataloader_test = DataLoader.DataLoader(dataset_test, batch_size=self.batch_size, shuffle=False,
+                                                        num_workers=4)
 
-            test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
-            dataset_test = subDataset(test, target)
-            _dataloader_test = DataLoader.DataLoader(dataset_test, batch_size=self.batch_size, shuffle=False,
-                                                    num_workers=4)
-
-            # test.to(device)
-            # target.to(device)
-            cls.eval()
-
-            loss = []
-            res = []
-
-            for id,it in enumerate(_dataloader_test):
-                it = move_to_device(it, self.device_num)
-                test,target_l = it
-                outputs = cls(test, labels=target_l)
-                loss, res_1 = outputs[:2]
-                sigmoid = nn.Sigmoid()
-                res_1 = sigmoid(res_1).tolist()
-                res += res_1
-            res=torch.tensor(res)
-            # res = cls(test, target, tops)
-            # softmax = nn.Softmax()
-            # criterion = nn.CrossEntropyLoss()
-            # out = softmax(res)
-            # loss = criterion(res, target)
-
-            # print(out)
-            # ind = torch.argmax(out, dim=1)
-            # print('++++++++++')
-            # min(2, b_l)
-            tops = torch.topk(res, min(3, b_l), dim=0)
-            ind = [0] * b_l
-            for ii in tops[1]:
-                ind[ii[0]] = 1
-            ind = torch.tensor(ind).to(self.device)
-            # print(res)
-            # print(target)
-            # print(ind)
-            r_t += target.tolist()
-            i_t += ind.tolist()
-            target=move_to_device(target,self.device_num)
-            p = (ind == target).sum()
-            rp += p.item()
-            if i % 20 == 0:
-                logger.info('-' + str(i) + ' ' + str(loss))
-        return (float(rp) / float(intv))#, r_t, i_t
+                cls.eval()
+                res = []
+                for id,it in enumerate(_dataloader_test):
+                    it = move_to_device(it, self.device_num)
+                    test,target_l = it
+                    outputs = cls(test, labels=target_l)
+                    loss, res_1 = outputs[:2]
+                    sigmoid = nn.Sigmoid()
+                    res_1 = sigmoid(res_1).tolist()
+                    res += res_1
+                    losss += loss
+                res=torch.tensor(res)
+                tops = torch.topk(res, 1, dim=0)
+                ind = [0] * b_l
+                for ii in tops[1]:
+                    ind[ii[0]] = 1
+                ind = torch.tensor(ind).to(self.device)
+                # print(res)
+                # print(target)
+                # print(ind)
+                r_t += target.tolist()
+                i_t += ind.tolist()
+                target=move_to_device(target,self.device_num)
+                p = (ind == target).sum()
+                rp += p.item()
+                if i % 100 == 0:
+                    logger.info('-' + str(i) + ' ' + str(loss))
+        return (float(rp) / float(intv)),losss#, r_t, i_t
 
     # def eval(self, cls, dataloader_test, intv):
     #     rp = 0

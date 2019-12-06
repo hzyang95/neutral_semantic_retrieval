@@ -4,11 +4,13 @@ path:
   test_data_new: ../data/version2.doc.dev.json
   train_data_para: ../data/para.train.json # 改为训练数据文件位置
   test_data_para: ../data/para.dev.json
+  test_data_para_new: ../data/version2.para.search.dev.json
   model_file: ../models/sample_ft1.model # 改为模型所在位置
+
 
 params:
   gpu: 0
-  gra: doc
+  gra: para
   epoch: 500 # 训练轮次
   intv: 2000
   thread: 5 # 训练使用的CPU数目

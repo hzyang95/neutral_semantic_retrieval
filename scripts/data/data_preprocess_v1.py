@@ -4,14 +4,14 @@ _stage = ['train', 'dev', 'test']
 stage = _stage[1]
 
 _obj = ['doc', 'para']
-obj = _obj[0]
+obj = _obj[1]
 
 
 _source =['search','zhidao']
-source = _source[1]
+source = _source[0]
 
 
-first_num = 20000
+first_num = 1000
 
 file_path = '../../../preprocessed/' + stage + 'set/'+ source +'.' + stage + '.json'
 
@@ -27,29 +27,35 @@ for line in file[:first_num]:
     js = json.loads(line)
     dcms = js['documents']
     ques = js['question']
-    temp_data = {'question':ques,'sample':[],'top':0}
+    if obj == 'doc':
+        temp_data = {'question':ques,'sample':[],'top':0}
     cand = 0
     for dc in dcms:
         paras = dc['paragraphs']
         gold = dc["most_related_para"]
         if obj == 'para':
+            temp_data = {'question': ques, 'sample': [], 'top': 0}
             for i, para in enumerate(paras):
+                tt += 1
                 text = para
                 label = 0
                 if i == gold:
                     label = 1
                     cand += 1
                 temp_data['sample'].append({"label": label, 'question':ques,'text': text})
+            temp_data['top'] = cand
+            data.append(temp_data)
+
         if obj == 'doc':
-            tt+=1
             text = ' '.join(paras)
             label = 0
             if dc["is_selected"]:
                 label = 1
                 cand += 1
             temp_data['sample'].append({"label": label, 'question':ques, 'text': text})
-    temp_data['top'] = cand
-    data.append(temp_data)
+    if obj == 'doc':
+        temp_data['top'] = cand
+        data.append(temp_data)
 print(len(data))
 print(tt)
 with open(save_path, 'w', encoding='utf-8') as json_file:
