@@ -97,7 +97,7 @@ def getData(conf_file):
     file = []
     with open(train_path, 'r', encoding='utf-8') as f:
         file += f.readlines()
-    for line in file[:10000]:
+    for line in file[:50000]:
         js = json.loads(line)
         # print(js['text'])
         # print(js['question'])
@@ -128,7 +128,7 @@ def getTestData(conf_file):
     file = []
     with open(test_path, 'r', encoding='utf-8') as f:
         file += f.readlines()
-    for line in file[:500]:
+    for line in file[:200]:
         js = json.loads(line)
         samples = []
         for item in js['sample']:

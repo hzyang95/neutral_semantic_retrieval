@@ -22,7 +22,7 @@ sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
 
 from pytorch_transformers import BertTokenizer, BertModel
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device_num = 0 if torch.cuda.is_available() else -1
@@ -82,7 +82,7 @@ def eval(cls, dataloader_test, tokenizer):
         # ind = torch.argmax(out, dim=1)
         # print('++++++++++')
         # min(2, b_l)
-        tops = torch.topk(res,min(3, b_l) , dim=0)
+        tops = torch.topk(res,min(1, b_l) , dim=0)
         ind = [0] * b_l
         for ii in tops[1]:
             ind[ii[0]] = 1
@@ -118,7 +118,11 @@ if __name__ == '__main__':
     # save_dir = '../models/new_epoch_40_pr_0.4935'
     # save_dir = '../models/doc_5000_warm_epoch_0_pr_0.507057546145494'
     # save_dir = '../models/doc_5000_epoch_120_pr_-0.5504885993485342'
-    save_dir = '../models/doc_5000_warm_best'
+    # save_dir = '../models/para_10000_500_warm_best'
+    # save_dir = '../models/doc_5000_warm_best'
+    # save_dir = '../models/para_50000_500_warm_best'
+    save_dir = '../models/para_50000_500_warm_epoch_0_loss_tensor(1626.3248)'
+
 
     cls = torch.load(save_dir)
     cls.to(device)
@@ -166,5 +170,9 @@ if __name__ == '__main__':
     print("tn: " + str(tn))
     print("fn: " + str(fn))
     print("acc: " + str((tp+tn) / (tp + fp +tn +fn)))
-    print("pre: "+ str(tp/(tp+fp)))
-    print("rec: " + str(tp / (tp + fn)))
+    pr = tp/(tp+fp)
+    print("pre: "+ str(pr))
+    rec = tp / (tp + fn)
+    print("rec: " + str(rec))
+    f1 = 2*pr*rec/(pr+rec)
+    print("f1:"+ str(f1))

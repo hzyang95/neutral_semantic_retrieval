@@ -15,7 +15,7 @@ from neu_sem_retrieval.model import Classifier
 from neu_sem_retrieval.utils import parse_config, mkdata, subDataset, getData,getTestData,mktestdata
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
-from transformers import BertTokenizer, BertModel, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
+from transformers import BertTokenizer, BertModel, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup,DistilBertForSequenceClassification
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +91,12 @@ class Trainer(object):
         # optimizer = optim.SGD(params)
         # optimizer = AdamW(params, warmup=0.1)
         optimizer = AdamW(optimizer_grouped_parameters)
-        scheduler = get_linear_schedule_with_warmup(optimizer, 10000, 100000)
+        scheduler = get_linear_schedule_with_warmup(optimizer, 100000, 1000000)
         # softmax = nn.Softmax()
         sigmoid = nn.Sigmoid()
         criterion = nn.CrossEntropyLoss()
         ma = 0
-        _losss=1000000
+        _losss=100000000
         for epoch in range(self.epoch):
             logger.info('-----' + str(epoch))
             acloss=torch.tensor(float(0))
@@ -122,15 +122,15 @@ class Trainer(object):
             logger.info(losss)
             if losss<_losss:
                 _losss=losss
-                save_dir = '../models/para_10000_500_warm_best'
+                save_dir = '../models/para_50000_500_warm_best'
                 torch.save(self.model, save_dir)
-                with open('best_10000_500_para.txt','w',encoding='utf-8') as ff:
+                with open('best_50000_1000_para.txt','w',encoding='utf-8') as ff:
                     ff.write(str(epoch))
                     ff.write('\n')
                     ff.write(str(losss))
                 logger.info('best model saved to: {}'.format(self.model_file))
             if epoch % 100 == 0:
-                save_dir = '../models/para_10000_500_warm_epoch_' + str(epoch) + '_loss_' + str(losss)
+                save_dir = '../models/para_50000_500_warm_epoch_' + str(epoch) + '_loss_' + str(losss)
                 torch.save(self.model, save_dir)
                 logger.info('model saved to: {}'.format(save_dir))
         logger.info('end training')

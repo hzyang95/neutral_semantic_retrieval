@@ -10,7 +10,7 @@ path:
 
 params:
   gpu: 0
-  gra: para
+  gra: doc
   epoch: 500 # 训练轮次
   intv: 2000
   thread: 5 # 训练使用的CPU数目
