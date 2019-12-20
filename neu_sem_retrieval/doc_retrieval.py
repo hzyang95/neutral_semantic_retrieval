@@ -23,7 +23,7 @@ for i, sample in enumerate(test_data[:200]):
     top = sample[1]
 
     # print(ques)
-    print(label)
+    # print(label)
     # print(text)
     tokenized_tokens = text + ques
 
@@ -37,12 +37,12 @@ for i, sample in enumerate(test_data[:200]):
     output = np.matmul(x, y.transpose())
     # print(res)
     # print(np.argmax(res))
-    tops = torch.topk(torch.tensor(output), min(3, len(text)), dim=0)
+    tops = torch.topk(torch.tensor(output), min(4, len(text)), dim=0)
     ind = [0] * len(text)
 
     for ii in tops[1]:
         ind[ii[0]] = 1
-    print(ind)
+    # print(ind)
     ref += label
     res += ind
 

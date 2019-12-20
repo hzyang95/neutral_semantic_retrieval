@@ -84,20 +84,18 @@ def getData(conf_file):
     data_conf, params_conf = conf['path'], conf['params']
 
     train_path = data_conf['train_data']
-    test_path = data_conf['test_data']
     intv = params_conf['intv']
     if (params_conf['gra'] == 'para'):
         train_path = data_conf['train_data_para']
-        test_path = data_conf['test_data_para']
+    if (params_conf['gra'] == 'sent'):
+        train_path = data_conf['train_data_sent']
     print(train_path)
-    print(test_path)
     train_data = []
-    test_data = []
 
     file = []
     with open(train_path, 'r', encoding='utf-8') as f:
         file += f.readlines()
-    for line in file[:50000]:
+    for line in file[:10000]:
         js = json.loads(line)
         # print(js['text'])
         # print(js['question'])
@@ -122,16 +120,20 @@ def getTestData(conf_file):
     test_path = data_conf['test_data_new']
     if (params_conf['gra'] == 'para'):
         test_path = data_conf['test_data_para_new']
+    if (params_conf['gra'] == 'sent'):
+        test_path = data_conf['test_data_sent_new']
     print(test_path)
     test_data = []
 
     file = []
     with open(test_path, 'r', encoding='utf-8') as f:
         file += f.readlines()
-    for line in file[:200]:
+    for line in file[:500]:
         js = json.loads(line)
         samples = []
         for item in js['sample']:
             samples.append([item['text'], item['question'], item['label']])
         test_data.append([samples,js['top']])
     return test_data
+
+print(torch.mean(torch.tensor([1.0,2.0,3.0,4.0])))

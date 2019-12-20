@@ -1,10 +1,5 @@
 import fasttext
 import logging
-
-'''
-6191
-1173
-'''
 import torch.optim as optim
 import os
 import sys
@@ -14,7 +9,7 @@ import torch.nn.utils.rnn as rnn_utils
 import torch.utils.data.dataloader as DataLoader
 from allennlp.nn.util import move_to_device
 
-from neu_sem_retrieval.model import Classifier
+# from neu_sem_retrieval.model import Classifier
 from neu_sem_retrieval.utils import parse_config, mkdata, subDataset, getData, getTestData, mktestdata
 
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -22,14 +17,14 @@ sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
 
 from pytorch_transformers import BertTokenizer, BertModel
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# device_num = 0 if torch.cuda.is_available() else -1
-device = "cpu"
-device_num = -1
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device_num = 0 if torch.cuda.is_available() else -1
 
-logger = logging.getLogger(__name__)
+
+# device = "cpu"
+# device_num = -1
 
 
 def eval(cls, dataloader_test, tokenizer):
@@ -38,65 +33,43 @@ def eval(cls, dataloader_test, tokenizer):
 
     r_t = []
     i_t = []
-    for i, item in enumerate(dataloader_test):
-        # item = move_to_device(item, device_num)
-        # print('i:', i)
-        # data, label, len_ = item
-        #
-        # print('data:', data)
-        # print('label:', label)
-        # data = bertmodel(data.cuda())[0]
-        test, target, tops = mktestdata(tokenizer, item)
-        # print(target_train)
-        # print(input_ids[:10])
-        # bertmodel = BertModel.from_pretrained(language).cuda()
-        # train = rnn_utils.pad_sequence(train, batch_first=True)  # , batch_first=True
-        b_l = len(test)
-        intv += b_l
 
-        test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
-        # dataset_train = subDataset(train, target_train, len_list_train)
-
-        # test.to(device)
-        # target.to(device)
-
-        test = move_to_device(test, device_num)
-        target = move_to_device(target, device_num)
-
+    with torch.no_grad():
         cls.eval()
+        for i, item in enumerate(dataloader_test):
+            test, target, tops = mktestdata(tokenizer, item)
+            b_l = len(test)
+            intv += b_l
+            test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
+            test = test.to(device)
+            target = target.to(device)
 
-        outputs = cls(test, labels=target)
-        loss, res = outputs[:2]
-        # print(outputs)
-        print(res)
-        sigmoid = nn.Sigmoid()
-        res = sigmoid(res)
+            outputs = cls(test, labels=target)
+            loss, res = outputs[:2]
 
-        # res = cls(test, target, tops)
-        # softmax = nn.Softmax()
-        # criterion = nn.CrossEntropyLoss()
-        # out = softmax(res)
-        # loss = criterion(res, target)
-
-        # print(out)
-        # ind = torch.argmax(out, dim=1)
-        # print('++++++++++')
-        # min(2, b_l)
-        tops = torch.topk(res,min(1, b_l) , dim=0)
-        ind = [0] * b_l
-        for ii in tops[1]:
-            ind[ii[0]] = 1
-        ind = torch.tensor(ind).to(device)
-        print(res)
-        print(target)
-        print(ind)
-        r_t += target.tolist()
-        i_t += ind.tolist()
-        p = (ind == target).sum()
-        rp += p.item()
-        if i % 20 == 0:
-            print('-' + str(i) + ' ' + str(loss))
-    return (float(rp) / (-1 * intv)), r_t, i_t
+            # res_1 = self.model(test)
+            # criterion = nn.MSELoss()
+            # loss = criterion(res_1.view(-1,self.num_labels), target.view(-1))
+            loss = torch.mean(loss)
+            sigmoid = nn.Sigmoid()
+            res = sigmoid(res)
+            tops = torch.topk(res, min(1, b_l), dim=0)
+            ind = [0] * b_l
+            for ii in tops[1]:
+                ind[ii[0]] = 1
+            ind = torch.tensor(ind).to(device)
+            # print(res)
+            # print(target)
+            # print(ind)
+            r_t += target.tolist()
+            i_t += ind.tolist()
+            # target=move_to_device(target,self.device_num)
+            target = target.to(device)
+            p = (ind == target).sum()
+            rp += p.item()
+            if i % 100 == 0:
+                print('-' + str(i) + ' ' + str(loss))
+    return (float(rp) / float(intv)), r_t, i_t
 
 
 # topk = torch.topk(torch.tensor([[0.7829],[0.2532],[0.6864],[0.3352]]), 2,dim=0)
@@ -117,15 +90,16 @@ if __name__ == '__main__':
     # save_dir = '../models/new_epoch_60_pr_0.5045'
     # save_dir = '../models/new_epoch_40_pr_0.4935'
     # save_dir = '../models/doc_5000_warm_epoch_0_pr_0.507057546145494'
-    # save_dir = '../models/doc_5000_epoch_120_pr_-0.5504885993485342'
     # save_dir = '../models/para_10000_500_warm_best'
-    # save_dir = '../models/doc_5000_warm_best'
+    save_dir = '../models/para_20000_200_warm_best_4gpu'
+    # save_dir = '../models/sent_53019_441_warm_best_4gpu'
     # save_dir = '../models/para_50000_500_warm_best'
-    save_dir = '../models/para_50000_500_warm_epoch_0_loss_tensor(1626.3248)'
+    # save_dir = '../models/sent_53019_441_warm_best'
 
-
-    cls = torch.load(save_dir)
+    cls = torch.load(save_dir).module
     cls.to(device)
+    # if torch.cuda.device_count() > 1:
+    #     model = torch.nn.DataParallel(cls, [i for i in range(torch.cuda.device_count())])
 
     conf_file = os.path.join(CUR_PATH, '../conf/config.yaml')
     conf = parse_config(conf_file)
@@ -154,25 +128,25 @@ if __name__ == '__main__':
     for i in range(length):
         a = ref[i]
         b = res[i]
-        if a==1:
-            if b==1:
+        if a == 1:
+            if b == 1:
                 tp += 1
             else:
                 fn += 1
         else:
-            if b==1:
+            if b == 1:
                 fp += 1
             else:
                 tn += 1
 
-    print("tp: "+str(tp))
+    print("tp: " + str(tp))
     print("fp: " + str(fp))
     print("tn: " + str(tn))
     print("fn: " + str(fn))
-    print("acc: " + str((tp+tn) / (tp + fp +tn +fn)))
-    pr = tp/(tp+fp)
-    print("pre: "+ str(pr))
+    print("acc: " + str((tp + tn) / (tp + fp + tn + fn)))
+    pr = tp / (tp + fp)
+    print("pre: " + str(pr))
     rec = tp / (tp + fn)
     print("rec: " + str(rec))
-    f1 = 2*pr*rec/(pr+rec)
-    print("f1:"+ str(f1))
+    f1 = 2 * pr * rec / (pr + rec)
+    print("f1:" + str(f1))

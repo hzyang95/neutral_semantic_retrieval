@@ -17,8 +17,10 @@ CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
 from transformers import BertTokenizer, BertModel, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup,DistilBertForSequenceClassification
 
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger()
+file = logging.FileHandler(str(torch.cuda.device_count())+'gpulogpara',encoding='utf-8')
+file.setLevel(level=logging.INFO)
+logger.addHandler(file)
 
 class Trainer(object):
     def __init__(self, conf_file):
@@ -35,12 +37,14 @@ class Trainer(object):
         self.epoch = params_conf['epoch']
         self.batch_size = params_conf['batch_size']
         self.learning_rate = params_conf['learning_rate']
+        self.num_labels = params_conf['res']
         self.language = 'english'
         if params_conf['choice'] == 1:
             self.language = 'chinese'
         self.tokenizer = BertTokenizer.from_pretrained(params_conf[self.language])
         self.model = BertForSequenceClassification.from_pretrained(params_conf[self.language], num_labels=1)
-        self.device_num = params_conf['gpu']
+        # self.model = Classifier(conf_file)
+        self.device_num = torch.cuda.device_count()
         self.device = 'cpu'
         if self.device_num >= 0:
             self.device = 'cuda'
@@ -75,13 +79,9 @@ class Trainer(object):
         # print(self.model.parameters())
         base_params = list(map(id, self.model.bert.parameters()))
         logits_params = filter(lambda p: id(p) not in base_params, self.model.parameters())
-        # params = [
-        #     {"params": logits_params, "lr": 0.01},
-        #     {"params": self.model.bert.parameters(), "lr": 1e-5},
-        # ]
+        # base_params = list(map(id, self.model.bertmodel.parameters()))
+        # logits_params = filter(lambda p: id(p) not in base_params, self.model.parameters())
 
-        # param_optimizer = list(self.model.named_parameters())
-        # no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         optimizer_grouped_parameters = [
             # {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
             # {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0},
@@ -92,6 +92,8 @@ class Trainer(object):
         # optimizer = AdamW(params, warmup=0.1)
         optimizer = AdamW(optimizer_grouped_parameters)
         scheduler = get_linear_schedule_with_warmup(optimizer, 100000, 1000000)
+        if self.device_num>1:
+            self.model = torch.nn.DataParallel(self.model,[i for i in range(torch.cuda.device_count())])
         # softmax = nn.Softmax()
         sigmoid = nn.Sigmoid()
         criterion = nn.CrossEntropyLoss()
@@ -101,13 +103,23 @@ class Trainer(object):
             logger.info('-----' + str(epoch))
             acloss=torch.tensor(float(0))
             for i, item in enumerate(dataloader_train):
-                item = move_to_device(item, self.device_num)
+                # item = move_to_device(item, self.device_num)
                 # print('i:', i)
                 data, label = item
+                data = data.to(self.device)
+                label = label.to(self.device)
                 optimizer.zero_grad()  # zero the gradient buffers
                 self.model.train()
                 outputs = self.model(data, labels=label)
                 loss, res = outputs[:2]
+                # outputs = self.model(data)
+                # res = sigmoid(outputs)
+                # print(res.size())
+                # print(label.size())
+                # loss = criterion(outputs.view(-1,self.num_labels), label.view(-1))
+                # print(loss.size())
+                # print(acloss.size())
+                loss = torch.mean(loss)
                 acloss += loss
                 loss.backward()
                 optimizer.step()
@@ -122,15 +134,20 @@ class Trainer(object):
             logger.info(losss)
             if losss<_losss:
                 _losss=losss
-                save_dir = '../models/para_50000_500_warm_best'
+                # save_dir = '../models/sent_53019_441_warm_best_'+str(torch.cuda.device_count()) +'gpu'
+                save_dir = '../models/para_10000_200_warm_best_' + str(torch.cuda.device_count()) + 'gpu'
                 torch.save(self.model, save_dir)
-                with open('best_50000_1000_para.txt','w',encoding='utf-8') as ff:
+
+                # with open('best_53019_441_sent_'+str(torch.cuda.device_count()) +'gpu.txt','w',encoding='utf-8') as ff:
+                with open('best_10000_200_para_' + str(torch.cuda.device_count()) + 'gpu.txt', 'w',encoding='utf-8') as ff:
                     ff.write(str(epoch))
                     ff.write('\n')
                     ff.write(str(losss))
                 logger.info('best model saved to: {}'.format(self.model_file))
             if epoch % 100 == 0:
-                save_dir = '../models/para_50000_500_warm_epoch_' + str(epoch) + '_loss_' + str(losss)
+                # save_dir = '../models/sent_53019_441_warm_epoch_' + str(epoch) + '_loss_' + str(losss) + '_'+str(torch.cuda.device_count()) +'gpu'
+                save_dir = '../models/para_10000_200_warm_epoch_' + str(epoch) + '_loss_' + str(losss) + '_' + str(
+                    torch.cuda.device_count()) + 'gpu'
                 torch.save(self.model, save_dir)
                 logger.info('model saved to: {}'.format(save_dir))
         logger.info('end training')
@@ -148,22 +165,19 @@ class Trainer(object):
                 b_l = len(test)
                 intv += b_l
                 test = rnn_utils.pad_sequence(test, batch_first=True)  # , batch_first=True
-                dataset_test = subDataset(test, target)
-                _dataloader_test = DataLoader.DataLoader(dataset_test, batch_size=self.batch_size, shuffle=False,
-                                                        num_workers=4)
+                test = test.to(self.device)
+                target = target.to(self.device)
 
-                cls.eval()
-                res = []
-                for id,it in enumerate(_dataloader_test):
-                    it = move_to_device(it, self.device_num)
-                    test,target_l = it
-                    outputs = cls(test, labels=target_l)
-                    loss, res_1 = outputs[:2]
-                    sigmoid = nn.Sigmoid()
-                    res_1 = sigmoid(res_1).tolist()
-                    res += res_1
-                    losss += loss
-                res=torch.tensor(res)
+                outputs = self.model(test, labels=target)
+                loss, res = outputs[:2]
+
+                # res_1 = self.model(test)
+                # criterion = nn.MSELoss()
+                # loss = criterion(res_1.view(-1,self.num_labels), target.view(-1))
+                loss = torch.mean(loss)
+                losss += loss
+                sigmoid = nn.Sigmoid()
+                res = sigmoid(res)
                 tops = torch.topk(res, 1, dim=0)
                 ind = [0] * b_l
                 for ii in tops[1]:
@@ -174,7 +188,8 @@ class Trainer(object):
                 # print(ind)
                 r_t += target.tolist()
                 i_t += ind.tolist()
-                target=move_to_device(target,self.device_num)
+                # target=move_to_device(target,self.device_num)
+                target = target.to(self.device)
                 p = (ind == target).sum()
                 rp += p.item()
                 if i % 100 == 0:
