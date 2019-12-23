@@ -89,9 +89,9 @@ def eval(cls, dataloader_test, tokenizer):
 if __name__ == '__main__':
     # save_dir = '../models/new_epoch_60_pr_0.5045'
     # save_dir = '../models/new_epoch_40_pr_0.4935'
-    # save_dir = '../models/doc_5000_warm_epoch_0_pr_0.507057546145494'
+    save_dir = '../models/para_10000_200_warm_best_4gpu'
     # save_dir = '../models/para_10000_500_warm_best'
-    save_dir = '../models/para_20000_200_warm_best_4gpu'
+    # save_dir = '../models/para_20000_200_warm_best_4gpu'
     # save_dir = '../models/sent_53019_441_warm_best_4gpu'
     # save_dir = '../models/para_50000_500_warm_best'
     # save_dir = '../models/sent_53019_441_warm_best'
