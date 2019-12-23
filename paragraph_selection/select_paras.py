@@ -11,11 +11,11 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
 from collections import Counter
-from transformers import BertTokenizer
-from transformers import BertForSequenceClassification
+from transformers import BertTokenizer,DistilBertTokenizer
+from transformers import BertForSequenceClassification,DistilBertForSequenceClassification
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+print(torch.cuda.device_count())
 class InputExample(object):
 
     def __init__(self, guid, text_a, text_b=None, label=None):
@@ -336,6 +336,8 @@ def get_dataframe(file_path):
 if __name__ == "__main__":
     args = set_args()
     tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
+    # tokenizer = DistilBertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
+
     paths = [
         # 'checkpoints/para_10000_200_Evaluation_epoch2_ckpt_loss0.08405735123841489.bin',
         # 'checkpoints/para_10000_500_Evaluation_epoch2_ckpt_loss0.08002149834353851.bin',
@@ -343,13 +345,16 @@ if __name__ == "__main__":
         # 'checkpoints/para_50000_200_Evaluation_epoch0_ckpt_loss0.08063447918765797.bin',
         # 'checkpoints/para_100000_1000_Evaluation_epoch2_step4000_ckpt_loss0.0754045086341767.bin',
         # 'checkpoints/Evaluation_epoch0_step2500_ckpt_loss0.07643189104053259.bin',
-        'checkpoints/Evaluation_epoch2_step8500_ckpt_loss0.07637711218634341.bin',
-        'checkpoints/Evaluation_epoch2_step10500_ckpt_loss0.07588262536815593.bin'
+        # 'checkpoints/Evaluation_epoch2_step8500_ckpt_loss0.07637711218634341.bin',
+        'checkpoints/para_200000_1000_Evaluation_epoch2_step10500_ckpt_loss0.07588262536815593.bin',
+        # 'checkpoints/para_200000_1000_1e-5_Evaluation_epoch2_step10000_ckpt_loss0.07299918155307619.bin',
+        'checkpoints/para_200000_1000_1e-5_Evaluation_epoch2_step10500_ckpt_loss0.07275297016305225.bin'
     ]
     for path in paths:
         # Load a trained model that you have fine-tuned
         model_state_dict = torch.load(path) #args.ckpt_
         model = BertForSequenceClassification.from_pretrained(args.bert_model, state_dict=model_state_dict, num_labels=1)
+        # model = DistilBertForSequenceClassification.from_pretrained(args.bert_model, state_dict=model_state_dict, num_labels=1)
         # model = torch.load(args.premodel_path)
         model.cuda()
         model = torch.nn.DataParallel(model)

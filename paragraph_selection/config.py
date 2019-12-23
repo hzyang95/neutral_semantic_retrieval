@@ -25,7 +25,7 @@ def set_args():
                         default=1000,
                         type=int)
     parser.add_argument("--test_num",
-                        default=500,
+                        default=1000,
                         type=int)
 
     parser.add_argument("--split", type=str, default='dev')
@@ -36,7 +36,7 @@ def set_args():
                         default="/home/yunxuanxiao/xyx/data/HotpotQA",
                         type=str,
                         help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
-    parser.add_argument("--bert_model", default='bert-base-chinese', type=str,
+    parser.add_argument("--bert_model", default='bert-base-multilingual-cased', type=str,
                         help="Bert pre-trained model selected in the list: bert-base-uncased, "
                              "bert-large-uncased, bert-base-cased, bert-base-multilingual, bert-base-chinese.")
     parser.add_argument("--output_dir",

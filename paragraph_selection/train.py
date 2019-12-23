@@ -14,18 +14,24 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
-from transformers import BertTokenizer
-from transformers import BertForSequenceClassification
+from transformers import BertTokenizer, DistilBertTokenizer
+from transformers import BertForSequenceClassification, DistilBertForSequenceClassification
+
 from pytorch_pretrained_bert.optimization import BertAdam
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+dis = False
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
+formatter_file = logging.Formatter('%(asctime)s - %(filename)s '
+                                   '- %(funcName)s- %(lineno)d- '
+                                   '-%(levelname)s - %(message)s')
 logger = logging.getLogger()
-file = logging.FileHandler(str(torch.cuda.device_count()) + 'gpupara_new', encoding='utf-8')
+file = logging.FileHandler(str(dis) + '_' + str(torch.cuda.device_count()) + '_gpupara_new', encoding='utf-8')
 file.setLevel(level=logging.INFO)
+file.setFormatter(formatter_file)
 logger.addHandler(file)
 
 
@@ -208,7 +214,11 @@ def evaluate(do_pred=False, pred_path=None):
         label_ids = label_ids.cuda().unsqueeze(-1)
 
         with torch.no_grad():
-            tmp_eval_loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask, labels=label_ids)[:2]
+            if dis:
+                tmp_eval_loss, logits = model(input_ids=input_ids, attention_mask=input_mask, labels=label_ids)[:2]
+            else:
+                tmp_eval_loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids,
+                                              attention_mask=input_mask, labels=label_ids)[:2]
             # logits = model(input_ids, segment_ids, input_mask)
 
         logits = logits.detach().cpu().numpy()
@@ -239,12 +249,16 @@ def evaluate(do_pred=False, pred_path=None):
         logger.info("***** Writting Predictions ******")
         logits0 = np.concatenate(predictions, axis=0)[:, 0]
         ground_truth = [fea.label_id for fea in eval_features]
-        pandas.DataFrame({'logits0': logits0,  'label': ground_truth}).to_csv(pred_path)
+        pandas.DataFrame({'logits0': logits0, 'label': ground_truth}).to_csv(pred_path)
     return eval_loss  # , eval_accuracy
 
 
 if __name__ == "__main__":
     args = set_args()
+    if dis:
+        args.train_batch_size = 100
+        args.eval_batch_size = 50
+        args.bert_model = 'distilbert-base-multilingual-cased'
     writer = SummaryWriter(log_dir="figures")
 
     # Set GPU Issue
@@ -269,10 +283,17 @@ if __name__ == "__main__":
     label_list = processor.get_labels()
 
     # Prepare Tokenizer
-    tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
+    if dis:
+        tokenizer = DistilBertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
+    else:
+        tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
 
     # Prepare Model
-    model = BertForSequenceClassification.from_pretrained(args.bert_model, num_labels=num_labels)
+    if dis:
+        model = DistilBertForSequenceClassification.from_pretrained(args.bert_model, num_labels=num_labels)
+    else:
+        model = BertForSequenceClassification.from_pretrained(args.bert_model, num_labels=num_labels)
+
     model.cuda()
     if n_gpu > 1:
         model = torch.nn.DataParallel(model)
@@ -332,7 +353,11 @@ if __name__ == "__main__":
                 # print(input_mask.size())
                 # print(segment_ids.size())
                 # print(label_ids.size())
-                loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask, labels=label_ids)[:2]
+                if dis:
+                    loss, logits = model(input_ids=input_ids, attention_mask=input_mask, labels=label_ids)[:2]
+                else:
+                    loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask,
+                                         labels=label_ids)[:2]
                 if n_gpu > 1:
                     loss = loss.mean()  # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -351,7 +376,7 @@ if __name__ == "__main__":
                     optimizer.zero_grad()
                     global_step += 1
                 # Save a trained model
-                if global_step % 500 == 0 and global_step != 0:
+                if (step + 1) % 500 == 0 and global_step != 0:
                     result = {'train_loss': tr_loss / nb_tr_steps,
                               # 'eval_accuracy': eval_accuracy,
                               'global_step': global_step}
@@ -359,15 +384,20 @@ if __name__ == "__main__":
                     logger.info("***** train results *****")
                     for key in sorted(result.keys()):
                         logger.info("  %s = %s", key, str(result[key]))
-                    output_prediction_file = os.path.join(args.output_dir, "{}_epoch{}_step{}_pred.csv".format(args.name, epc, global_step))
+                    output_prediction_file = os.path.join(args.output_dir, "{}_{}_{}_{}_epoch{}_step{}_pred.csv".
+                                                          format(int(dis), args.train_num, args.dev_num,
+                                                                 args.name, epc, global_step))
                     eval_loss = evaluate(do_pred=True, pred_path=output_prediction_file)
                     model.train()
                     add_figure(args.name, writer, global_step, tr_loss / nb_tr_steps, eval_loss)
-                    if m_loss>eval_loss:
+                    if m_loss > eval_loss:
                         m_loss = eval_loss
                         output_model_file = os.path.join(args.ckpt_dir,
-                                                         "{}_epoch{}_step{}_ckpt_loss{}.bin".format(args.name, epc,global_step, eval_loss))
-                        model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
+                                                         "{}_{}_{}_{}_epoch{}_step{}_ckpt_loss{}.bin".format(
+                                                             int(dis), args.train_num, args.dev_num, args.name,
+                                                             epc, global_step, eval_loss))
+                        model_to_save = model.module if hasattr(model,
+                                                                'module') else model  # Only save the model it-self
                         torch.save(model_to_save.state_dict(), output_model_file)
 
     # Load a trained model that you have fine-tuned
