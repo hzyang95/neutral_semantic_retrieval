@@ -8,6 +8,8 @@ import json
 import pandas
 from tqdm import tqdm, trange
 from config import set_args
+
+from data_processor import DataProcessor, convert_examples_to_features,convert_examples_to_features_test
 from tensorboardX import SummaryWriter
 
 import numpy as np
@@ -19,8 +21,20 @@ from transformers import BertForSequenceClassification, DistilBertForSequenceCla
 
 from pytorch_pretrained_bert.optimization import BertAdam
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-dis = False
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
+# 0 ： mul
+# 1 : dis
+# 2 : chi
+
+dis = 1
+args = set_args()
+if dis == 1:
+    args.train_batch_size = 100
+    args.eval_batch_size = 50
+    args.bert_model = 'distilbert-base-multilingual-cased'
+if dis == 2:
+    args.bert_model = 'bert-base-chinese'
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
@@ -29,137 +43,12 @@ formatter_file = logging.Formatter('%(asctime)s - %(filename)s '
                                    '- %(funcName)s- %(lineno)d- '
                                    '-%(levelname)s - %(message)s')
 logger = logging.getLogger()
-file = logging.FileHandler(str(dis) + '_' + str(torch.cuda.device_count()) + '_gpupara_new', encoding='utf-8')
+file = logging.FileHandler(str(dis) + '_' + str(args.gra) + '_' + str(args.train_num) + '_' + str(args.dev_num) +
+                           '_'+str(args.train_batch_size) + '_' + str(args.eval_batch_size) + '_' +
+                           str(torch.cuda.device_count()) + '_gpupara_new', encoding='utf-8')
 file.setLevel(level=logging.INFO)
 file.setFormatter(formatter_file)
 logger.addHandler(file)
-
-
-class InputExample(object):
-
-    def __init__(self, guid, text_a, text_b=None, label=None):
-        self.guid = guid
-        self.text_a = text_a
-        self.text_b = text_b
-        self.label = label
-
-
-class InputFeatures(object):
-
-    def __init__(self, input_ids, input_mask, segment_ids, label_id):
-        self.input_ids = input_ids
-        self.input_mask = input_mask
-        self.segment_ids = segment_ids
-        self.label_id = label_id
-
-
-class DataProcessor(object):
-
-    def get_train_examples(self, data_dir, top):
-        # logger.info("LOOKING AT {}".format(os.path.join(data_dir, "hotpot_ss_train.csv")))
-        # train_path = os.path.join(data_dir, "hotpot_ss_train.csv")
-        train_path = data_dir
-        return self._create_examples_train(
-            train_path, set_type='train', top=top)
-
-    def get_dev_examples(self, data_dir, top):
-        # dev_path = os.path.join(data_dir, "hotpot_ss_dev.csv")
-        return self._create_examples_dev(
-            data_dir, set_type='dev', top=top)
-
-    def get_labels(self):
-        return [False, True]
-
-    def _create_examples_train(self, path, set_type, top):
-        examples = []
-        with open(path, 'r', encoding='utf-8') as f:
-            file = f.readlines()
-        for i, line in enumerate(file[:top]):
-            row = json.loads(line)
-            guid = "%s-%s" % (set_type, i)
-            text_a = row['question']
-            # text_b = '{} {}'.format(row['context'], row['title'])
-            text_b = '{}'.format(row['text'])
-            label = row['label']
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-        # for (i, row) in df.iterrows():
-        #     guid = "%s-%s" % (set_type, i)
-        #     text_a = row['question']
-        #     # text_b = '{} {}'.format(row['context'], row['title'])
-        #     text_b = '{}'.format(row['context'])
-        #     label = row['label']
-        #     examples.append(
-        #         InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-        return examples
-
-    def _create_examples_dev(self, path, set_type, top):
-        examples = []
-        with open(path, 'r', encoding='utf-8') as f:
-            file = f.readlines()
-        num = 0
-        for i, line in enumerate(file[:top]):
-            row = json.loads(line)
-            for item in row['sample']:
-                num += 1
-                guid = "%s-%s" % (set_type, num)
-                text_a = item['question']
-                # text_b = '{} {}'.format(row['context'], row['title'])
-                text_b = '{}'.format(item['text'])
-                label = item['label']
-                examples.append(
-                    InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-
-        return examples
-
-
-def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer, verbose=False):
-    """Loads a data file into a list of `InputBatch`s."""
-
-    label_map = {label: i for i, label in enumerate(label_list)}
-    features = []
-
-    for (ex_index, example) in enumerate(tqdm(examples)):
-        tokens_a = tokenizer.tokenize(example.text_a)
-        tokens_b = tokenizer.tokenize(example.text_b)
-        _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
-
-        # Feature ids
-        tokens = ["[CLS]"] + tokens_a + ["[SEP]"] + tokens_b + ["[SEP]"]
-        segment_ids = [0] * (len(tokens_a) + 2) + [1] * (len(tokens_b) + 1)
-        input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-        # Mask and Paddings
-        input_mask = [1] * len(input_ids)
-        padding = [0] * (max_seq_length - len(input_ids))
-
-        input_ids += padding
-        input_mask += padding
-        segment_ids += padding
-
-        assert len(input_ids) == max_seq_length
-        assert len(input_mask) == max_seq_length
-        assert len(segment_ids) == max_seq_length
-
-        label_id = label_map[example.label]
-        # if ex_index < 5 and verbose:
-        #     logger.info("*** Example ***")
-        #     logger.info("guid: %s" % (example.guid))
-        #     logger.info("tokens: %s" % " ".join(
-        #             [str(x) for x in tokens]))
-        #     logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        #     logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-        #     logger.info(
-        #             "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-        #     logger.info("label: %s (id = %d)" % (example.label, label_id))
-
-        features.append(
-            InputFeatures(input_ids=input_ids,
-                          input_mask=input_mask,
-                          segment_ids=segment_ids,
-                          label_id=label_id))
-    return features
-
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
     """Truncates a sequence pair in place to the maximum length."""
@@ -184,81 +73,187 @@ def warmup_linear(x, warmup=0.002):
     return 1.0 - x
 
 
-def add_figure(name, writer, global_step, train_loss, test_loss):  # , test_acc
-    writer.add_scalars(name + '_data/loss_group', {'train_loss': train_loss, 'test_loss': test_loss}, global_step)
+def add_figure(name, writer, global_step, train_loss, test_loss,pre, rec, f1):  # , test_acc
+    writer.add_scalars(name + '_data/loss_group', {'train_loss': train_loss, 'test_loss': test_loss, 'pre':pre, 'rec':rec,'f1':f1}, global_step)
     # writer.add_scalar(name + '_data/test_acc', test_acc, global_step)
     return
 
 
-def evaluate(do_pred=False, pred_path=None):
+# def evaluate(do_pred=False, pred_path=None):
+#     logger.info("***** Running evaluation *****")
+#     logger.info("  Num examples = %d", len(eval_examples))
+#     logger.info("  Batch size = %d", args.eval_batch_size)
+#     eval_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
+#     eval_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
+#     eval_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
+#     eval_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.float)
+#     eval_data = TensorDataset(eval_input_ids, eval_input_mask, eval_segment_ids, eval_label_ids)
+#     # Run prediction for full data
+#     eval_sampler = SequentialSampler(eval_data)
+#     eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
+#
+#     model.eval()
+#     eval_loss, eval_accuracy = 0, 0
+#     nb_eval_steps, nb_eval_examples = 0, 0
+#     predictions = []
+#     for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataloader, desc="Evaluation"):
+#         input_ids = input_ids.cuda()
+#         input_mask = input_mask.cuda()
+#         segment_ids = segment_ids.cuda()
+#         label_ids = label_ids.cuda().unsqueeze(-1)
+#
+#         with torch.no_grad():
+#             if dis:
+#                 tmp_eval_loss, logits = model(input_ids=input_ids, attention_mask=input_mask, labels=label_ids)[:2]
+#             else:
+#                 tmp_eval_loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids,
+#                                               attention_mask=input_mask, labels=label_ids)[:2]
+#             # logits = model(input_ids, segment_ids, input_mask)
+#
+#         logits = logits.detach().cpu().numpy()
+#         label_ids = label_ids.to('cpu').numpy()
+#         # tmp_eval_accuracy = accuracy(logits, label_ids)
+#
+#         predictions.append(logits)
+#
+#         eval_loss += tmp_eval_loss.mean().item()
+#         # eval_accuracy += tmp_eval_accuracy
+#
+#         nb_eval_examples += input_ids.size(0)
+#         nb_eval_steps += 1
+#
+#     eval_loss = eval_loss / nb_eval_steps
+#     # eval_accuracy = eval_accuracy / nb_eval_examples
+#
+#     result = {'eval_loss': eval_loss,
+#               # 'eval_accuracy': eval_accuracy,
+#               'global_step': global_step}
+#
+#     logger.info("***** Eval results *****")
+#     for key in sorted(result.keys()):
+#         logger.info("  %s = %s", key, str(result[key]))
+#         # writer.write("%s = %s\n" % (key, str(result[key])))
+#
+#     # if do_pred and pred_path is not None:
+#     #     logger.info("***** Writting Predictions ******")
+#     #     logits0 = np.concatenate(predictions, axis=0)[:, 0]
+#     #     ground_truth = [fea.label_id for fea in eval_features]
+#     #     pandas.DataFrame({'logits0': logits0, 'label': ground_truth}).to_csv(pred_path)
+#     return eval_loss  # , eval_accuracy
+def calc_result(ref, res):
+    assert len(ref) == len(res)
+    length = len(ref)
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
+
+    for i in range(length):
+        a = ref[i]
+        b = res[i]
+        if a == 1:
+            if b == 1:
+                tp += 1
+            else:
+                fn += 1
+        else:
+            if b == 1:
+                fp += 1
+            else:
+                tn += 1
+    # print(path)
+    # print("tp: " + str(tp))
+    # print("fp: " + str(fp))
+    # print("tn: " + str(tn))
+    # print("fn: " + str(fn))
+    # print("acc: " + str((tp + tn) / (tp + fp + tn + fn)))
+    pr = tp / (tp + fp)
+    # print("pre: " + str(pr))
+    rec = tp / (tp + fn)
+    # print("rec: " + str(rec))
+    f1 = 2 * pr * rec / (pr + rec)
+    # print("f1:" + str(f1))
+    return pr, rec, f1
+
+def evaluate(top, dis):
     logger.info("***** Running evaluation *****")
     logger.info("  Num examples = %d", len(eval_examples))
     logger.info("  Batch size = %d", args.eval_batch_size)
-    eval_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
-    eval_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
-    eval_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
-    eval_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.float)
-    eval_data = TensorDataset(eval_input_ids, eval_input_mask, eval_segment_ids, eval_label_ids)
-    # Run prediction for full data
-    eval_sampler = SequentialSampler(eval_data)
-    eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
-
+    predictions = []
+    targets = []
     model.eval()
     eval_loss, eval_accuracy = 0, 0
     nb_eval_steps, nb_eval_examples = 0, 0
-    predictions = []
-    for input_ids, input_mask, segment_ids, label_ids in tqdm(eval_dataloader, desc="Evaluation"):
-        input_ids = input_ids.cuda()
-        input_mask = input_mask.cuda()
-        segment_ids = segment_ids.cuda()
-        label_ids = label_ids.cuda().unsqueeze(-1)
+    for feature in eval_features:
+        input_ids = torch.tensor([f.input_ids for f in feature], dtype=torch.long)
+        input_mask = torch.tensor([f.input_mask for f in feature], dtype=torch.long)
+        segment_ids = torch.tensor([f.segment_ids for f in feature], dtype=torch.long)
+        label_ids = torch.tensor([f.label_id for f in feature], dtype=torch.float)
+        data = TensorDataset(input_ids, input_mask, segment_ids, label_ids)
+        # Run prediction for full data
+        sampler = SequentialSampler(data)
+        dataloader = DataLoader(data, sampler=sampler, batch_size=args.eval_batch_size)
 
-        with torch.no_grad():
-            if dis:
-                tmp_eval_loss, logits = model(input_ids=input_ids, attention_mask=input_mask, labels=label_ids)[:2]
-            else:
-                tmp_eval_loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids,
-                                              attention_mask=input_mask, labels=label_ids)[:2]
-            # logits = model(input_ids, segment_ids, input_mask)
 
-        logits = logits.detach().cpu().numpy()
-        label_ids = label_ids.to('cpu').numpy()
-        # tmp_eval_accuracy = accuracy(logits, label_ids)
 
-        predictions.append(logits)
+        for input_ids, input_mask, segment_ids, label_ids in dataloader: #, desc="Evaluation")
+            input_ids = input_ids.cuda()
+            input_mask = input_mask.cuda()
+            segment_ids = segment_ids.cuda()
+            label_ids = label_ids.cuda()
 
-        eval_loss += tmp_eval_loss.mean().item()
-        # eval_accuracy += tmp_eval_accuracy
+            with torch.no_grad():
+                if dis == 1:
+                    loss, logits = model(input_ids=input_ids, attention_mask=input_mask, labels=label_ids)[:2]
+                else:
+                    loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask,
+                                     labels=label_ids)[:2]
+            sigmoid = torch.nn.Sigmoid()
+            logits = sigmoid(logits)
+            eval_loss += loss.mean().item()
+            b_l = input_ids.size(0)
 
-        nb_eval_examples += input_ids.size(0)
-        nb_eval_steps += 1
+            tops = torch.topk(logits, min(top, b_l), dim=0)
+            ind = [0] * b_l
+            for ii in tops[1]:
+                ind[ii[0]] = 1
+            # ind = torch.tensor(ind).to(device)
+            #
+            # logits = logits.detach().cpu().numpy()
+            label_ids = label_ids.to('cpu').tolist()
+            predictions += ind
+            targets += label_ids
+
+            nb_eval_examples += b_l
+            nb_eval_steps += 1
 
     eval_loss = eval_loss / nb_eval_steps
-    # eval_accuracy = eval_accuracy / nb_eval_examples
+    pre, rec, f1 = calc_result(targets, predictions)
+
+    pre = round(pre, 4)
+    rec = round(rec, 4)
+    f1 = round(f1, 4)
+    eval_loss = round(eval_loss,4)
 
     result = {'eval_loss': eval_loss,
-              # 'eval_accuracy': eval_accuracy,
-              'global_step': global_step}
-
+              'pre': pre,
+              'rec': rec,
+              'f1': f1}
     logger.info("***** Eval results *****")
     for key in sorted(result.keys()):
         logger.info("  %s = %s", key, str(result[key]))
-        # writer.write("%s = %s\n" % (key, str(result[key])))
 
-    if do_pred and pred_path is not None:
-        logger.info("***** Writting Predictions ******")
-        logits0 = np.concatenate(predictions, axis=0)[:, 0]
-        ground_truth = [fea.label_id for fea in eval_features]
-        pandas.DataFrame({'logits0': logits0, 'label': ground_truth}).to_csv(pred_path)
-    return eval_loss  # , eval_accuracy
 
+
+    return eval_loss, pre, rec, f1
 
 if __name__ == "__main__":
-    args = set_args()
-    if dis:
-        args.train_batch_size = 100
-        args.eval_batch_size = 50
-        args.bert_model = 'distilbert-base-multilingual-cased'
+
+    if dis == 1:
+        eval_step = 250
+    else:
+        eval_step = 500
+
     writer = SummaryWriter(log_dir="figures")
 
     # Set GPU Issue
@@ -283,13 +278,13 @@ if __name__ == "__main__":
     label_list = processor.get_labels()
 
     # Prepare Tokenizer
-    if dis:
+    if dis == 1:
         tokenizer = DistilBertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
     else:
         tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
 
     # Prepare Model
-    if dis:
+    if dis == 1:
         model = DistilBertForSequenceClassification.from_pretrained(args.bert_model, num_labels=num_labels)
     else:
         model = BertForSequenceClassification.from_pretrained(args.bert_model, num_labels=num_labels)
@@ -320,11 +315,11 @@ if __name__ == "__main__":
 
     # Training
     eval_examples = processor.get_dev_examples(args.dev_data, args.dev_num)
-    eval_features = convert_examples_to_features(
-        eval_examples, label_list, args.max_seq_length, tokenizer, verbose=False)
+    eval_features = convert_examples_to_features_test(eval_examples, label_list, args.max_seq_length, tokenizer, verbose=False)
 
     global_step = 0
     m_loss = 1000000000
+    max_f1 = 0
     if args.do_train:
         train_features = convert_examples_to_features(
             train_examples, label_list, args.max_seq_length, tokenizer, verbose=True)
@@ -353,7 +348,7 @@ if __name__ == "__main__":
                 # print(input_mask.size())
                 # print(segment_ids.size())
                 # print(label_ids.size())
-                if dis:
+                if dis == 1:
                     loss, logits = model(input_ids=input_ids, attention_mask=input_mask, labels=label_ids)[:2]
                 else:
                     loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask,
@@ -375,30 +370,41 @@ if __name__ == "__main__":
                     optimizer.step()
                     optimizer.zero_grad()
                     global_step += 1
-                # Save a trained model
-                if (step + 1) % 500 == 0 and global_step != 0:
-                    result = {'train_loss': tr_loss / nb_tr_steps,
-                              # 'eval_accuracy': eval_accuracy,
-                              'global_step': global_step}
+                    # Save a trained model
+                    if global_step % eval_step == 0 and global_step != 0:
+                        result = {'train_loss': tr_loss / nb_tr_steps,
+                                  # 'eval_accuracy': eval_accuracy,
+                                  'global_step': global_step}
 
-                    logger.info("***** train results *****")
-                    for key in sorted(result.keys()):
-                        logger.info("  %s = %s", key, str(result[key]))
-                    output_prediction_file = os.path.join(args.output_dir, "{}_{}_{}_{}_epoch{}_step{}_pred.csv".
-                                                          format(int(dis), args.train_num, args.dev_num,
-                                                                 args.name, epc, global_step))
-                    eval_loss = evaluate(do_pred=True, pred_path=output_prediction_file)
-                    model.train()
-                    add_figure(args.name, writer, global_step, tr_loss / nb_tr_steps, eval_loss)
-                    if m_loss > eval_loss:
-                        m_loss = eval_loss
-                        output_model_file = os.path.join(args.ckpt_dir,
-                                                         "{}_{}_{}_{}_epoch{}_step{}_ckpt_loss{}.bin".format(
-                                                             int(dis), args.train_num, args.dev_num, args.name,
-                                                             epc, global_step, eval_loss))
-                        model_to_save = model.module if hasattr(model,
-                                                                'module') else model  # Only save the model it-self
-                        torch.save(model_to_save.state_dict(), output_model_file)
+                        logger.info("***** train results *****")
+                        for key in sorted(result.keys()):
+                            logger.info("  %s = %s", key, str(result[key]))
+                        output_prediction_file = os.path.join(args.output_dir, "{}_{}_{}_{}_{}_epoch{}_step{}_pred.csv".
+                                                              format(int(dis), args.gra, args.train_num, args.dev_num,
+                                                                     args.name, epc, global_step))
+                        # eval_loss = evaluate(do_pred=True, pred_path=output_prediction_file)
+                        eval_loss, pre, rec, f1 = evaluate(1, dis)
+                        model.train()
+                        if max_f1 < f1:
+                            max_f1 = f1
+                            add_figure(args.name, writer, global_step, tr_loss / nb_tr_steps, eval_loss, pre, rec, f1)
+                            output_model_file = os.path.join(args.ckpt_dir,
+                                                             "{}_{}_{}_{}_{}_epoch{}_step{}_f1{}_loss{}.bin".format(
+                                                                 int(dis), args.gra, args.train_num, args.dev_num, args.name,
+                                                                 epc, global_step, f1, eval_loss))
+                            model_to_save = model.module if hasattr(model,
+                                                                    'module') else model  # Only save the model it-self
+                            torch.save(model_to_save.state_dict(), output_model_file)
+                    # add_figure(args.name, writer, global_step, tr_loss / nb_tr_steps, eval_loss)
+                    # if m_loss > eval_loss:
+                    #     m_loss = eval_loss
+                    #     output_model_file = os.path.join(args.ckpt_dir,
+                    #                                      "{}_{}_{}_{}_{}_epoch{}_step{}_ckpt_loss{}.bin".format(
+                    #                                          int(dis), args.gra, args.train_num, args.dev_num, args.name,
+                    #                                          epc, global_step, eval_loss))
+                    #     model_to_save = model.module if hasattr(model,
+                    #                                             'module') else model  # Only save the model it-self
+                    #     torch.save(model_to_save.state_dict(), output_model_file)
 
     # Load a trained model that you have fine-tuned
     # model_state_dict = torch.load(output_model_file)

@@ -10,7 +10,9 @@ def set_args():
     parser.add_argument("--premodel_path",
                         type=str,
                         default='../models/para_10000_500_warm_best')
-
+    parser.add_argument("--gra",
+                        type=str,
+                        default='para')
     # parser.add_argument("--output_path", type=str)
     parser.add_argument("--train_data",
                         default="../data/para.train.json",
