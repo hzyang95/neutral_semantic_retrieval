@@ -1,7 +1,8 @@
 path:
   train_data: ../data/doc.train.json # 改为训练数据文件位置
   test_data: ../data/doc.dev.json
-  test_data_new: ../data/version2.doc.dev.json
+#  test_data_new: ../data/version3.doc.zhidao.dev.json
+  test_data_new:  ../data/version3_doc_full_dev_all.json
   train_data_para: ../data/para.train.json # 改为训练数据文件位置
   train_data_sent: ../data/train.v1.53019.0.1.json # 改为训练数据文件位置
   test_data_para: ../data/para.dev.json
@@ -12,7 +13,7 @@ path:
 
 params:
   gpu: 0
-  gra: para
+  gra: sent
   epoch: 500 # 训练轮次
   intv: 2000
   thread: 5 # 训练使用的CPU数目

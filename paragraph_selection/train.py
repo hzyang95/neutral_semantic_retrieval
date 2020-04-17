@@ -5,11 +5,10 @@ import os
 import logging
 import random
 import json
-import pandas
 from tqdm import tqdm, trange
 from config import set_args
 
-from data_processor import DataProcessor, convert_examples_to_features,convert_examples_to_features_test
+from data_processor import DataProcessor, convert_examples_to_features, convert_examples_to_features_test
 from tensorboardX import SummaryWriter
 
 import numpy as np
@@ -28,13 +27,24 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 # 2 : chi
 
 dis = 1
+tops = 1
 args = set_args()
 if dis == 1:
-    args.train_batch_size = 100
-    args.eval_batch_size = 50
+    # args.train_batch_size = 100
+    # args.eval_batch_size = 50
     args.bert_model = 'distilbert-base-multilingual-cased'
 if dis == 2:
     args.bert_model = 'bert-base-chinese'
+
+if args.gra == 'sent':
+    args.train_data = '../data/sent_train.v1.35000.1205950.0.1.41.json'
+    args.dev_data = '../data/sent_valid.10000.23421.3.8.41.json'
+    args.max_seq_length = 50
+    args.train_batch_size *= 5
+    args.eval_batch_size *= 5
+    args.train_num *= 5
+    args.dev_num *= 5
+    tops = 3
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
@@ -44,11 +54,12 @@ formatter_file = logging.Formatter('%(asctime)s - %(filename)s '
                                    '-%(levelname)s - %(message)s')
 logger = logging.getLogger()
 file = logging.FileHandler(str(dis) + '_' + str(args.gra) + '_' + str(args.train_num) + '_' + str(args.dev_num) +
-                           '_'+str(args.train_batch_size) + '_' + str(args.eval_batch_size) + '_' +
-                           str(torch.cuda.device_count()) + '_gpupara_new', encoding='utf-8')
+                           '_' + str(args.train_batch_size) + '_' + str(args.eval_batch_size) + '_' +
+                           str(torch.cuda.device_count()) + '_gpu'+os.environ["CUDA_VISIBLE_DEVICES"]+'para_new', encoding='utf-8')
 file.setLevel(level=logging.INFO)
 file.setFormatter(formatter_file)
 logger.addHandler(file)
+
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
     """Truncates a sequence pair in place to the maximum length."""
@@ -73,8 +84,10 @@ def warmup_linear(x, warmup=0.002):
     return 1.0 - x
 
 
-def add_figure(name, writer, global_step, train_loss, test_loss,pre, rec, f1):  # , test_acc
-    writer.add_scalars(name + '_data/loss_group', {'train_loss': train_loss, 'test_loss': test_loss, 'pre':pre, 'rec':rec,'f1':f1}, global_step)
+def add_figure(name, writer, global_step, train_loss, test_loss, pre, rec, f1):  # , test_acc
+    writer.add_scalars(name + '_data/loss_group',
+                       {'train_loss': train_loss, 'test_loss': test_loss, 'pre': pre, 'rec': rec, 'f1': f1},
+                       global_step)
     # writer.add_scalar(name + '_data/test_acc', test_acc, global_step)
     return
 
@@ -175,6 +188,7 @@ def calc_result(ref, res):
     # print("f1:" + str(f1))
     return pr, rec, f1
 
+
 def evaluate(top, dis):
     logger.info("***** Running evaluation *****")
     logger.info("  Num examples = %d", len(eval_examples))
@@ -192,11 +206,9 @@ def evaluate(top, dis):
         data = TensorDataset(input_ids, input_mask, segment_ids, label_ids)
         # Run prediction for full data
         sampler = SequentialSampler(data)
-        dataloader = DataLoader(data, sampler=sampler, batch_size=args.eval_batch_size)
-
-
-
-        for input_ids, input_mask, segment_ids, label_ids in dataloader: #, desc="Evaluation")
+        b_l = input_ids.size(0)
+        dataloader = DataLoader(data, sampler=sampler, batch_size=b_l)
+        for input_ids, input_mask, segment_ids, label_ids in dataloader:  # , desc="Evaluation")
             input_ids = input_ids.cuda()
             input_mask = input_mask.cuda()
             segment_ids = segment_ids.cuda()
@@ -207,12 +219,10 @@ def evaluate(top, dis):
                     loss, logits = model(input_ids=input_ids, attention_mask=input_mask, labels=label_ids)[:2]
                 else:
                     loss, logits = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask,
-                                     labels=label_ids)[:2]
+                                         labels=label_ids)[:2]
             sigmoid = torch.nn.Sigmoid()
             logits = sigmoid(logits)
             eval_loss += loss.mean().item()
-            b_l = input_ids.size(0)
-
             tops = torch.topk(logits, min(top, b_l), dim=0)
             ind = [0] * b_l
             for ii in tops[1]:
@@ -233,7 +243,7 @@ def evaluate(top, dis):
     pre = round(pre, 4)
     rec = round(rec, 4)
     f1 = round(f1, 4)
-    eval_loss = round(eval_loss,4)
+    eval_loss = round(eval_loss, 4)
 
     result = {'eval_loss': eval_loss,
               'pre': pre,
@@ -243,9 +253,8 @@ def evaluate(top, dis):
     for key in sorted(result.keys()):
         logger.info("  %s = %s", key, str(result[key]))
 
-
-
     return eval_loss, pre, rec, f1
+
 
 if __name__ == "__main__":
 
@@ -315,7 +324,8 @@ if __name__ == "__main__":
 
     # Training
     eval_examples = processor.get_dev_examples(args.dev_data, args.dev_num)
-    eval_features = convert_examples_to_features_test(eval_examples, label_list, args.max_seq_length, tokenizer, verbose=False)
+    eval_features = convert_examples_to_features_test(eval_examples, label_list, args.max_seq_length, tokenizer,
+                                                      verbose=False)
 
     global_step = 0
     m_loss = 1000000000
@@ -379,18 +389,19 @@ if __name__ == "__main__":
                         logger.info("***** train results *****")
                         for key in sorted(result.keys()):
                             logger.info("  %s = %s", key, str(result[key]))
-                        output_prediction_file = os.path.join(args.output_dir, "{}_{}_{}_{}_{}_epoch{}_step{}_pred.csv".
+                        output_prediction_file = os.path.join(args.output_dir, "smallbs_{}_{}_{}_{}_{}_top{}_epoch{}_step{}_pred.csv".
                                                               format(int(dis), args.gra, args.train_num, args.dev_num,
-                                                                     args.name, epc, global_step))
+                                                                     args.name, str(tops), epc, global_step))
                         # eval_loss = evaluate(do_pred=True, pred_path=output_prediction_file)
-                        eval_loss, pre, rec, f1 = evaluate(1, dis)
+                        eval_loss, pre, rec, f1 = evaluate(tops, dis)
                         model.train()
                         if max_f1 < f1:
                             max_f1 = f1
                             add_figure(args.name, writer, global_step, tr_loss / nb_tr_steps, eval_loss, pre, rec, f1)
                             output_model_file = os.path.join(args.ckpt_dir,
-                                                             "{}_{}_{}_{}_{}_epoch{}_step{}_f1{}_loss{}.bin".format(
-                                                                 int(dis), args.gra, args.train_num, args.dev_num, args.name,
+                                                             "smallbs_{}_{}_{}_{}_{}_top{}_epoch{}_step{}_f1{}_loss{}.bin".format(
+                                                                 int(dis), args.gra, args.train_num, args.dev_num,
+                                                                 args.name, str(tops),
                                                                  epc, global_step, f1, eval_loss))
                             model_to_save = model.module if hasattr(model,
                                                                     'module') else model  # Only save the model it-self

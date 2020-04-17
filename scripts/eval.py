@@ -53,7 +53,7 @@ def eval(cls, dataloader_test, tokenizer):
             loss = torch.mean(loss)
             sigmoid = nn.Sigmoid()
             res = sigmoid(res)
-            tops = torch.topk(res, min(1, b_l), dim=0)
+            tops = torch.topk(res, min(tops, b_l), dim=0)
             ind = [0] * b_l
             for ii in tops[1]:
                 ind[ii[0]] = 1
@@ -87,16 +87,16 @@ def eval(cls, dataloader_test, tokenizer):
 # print(temp)
 
 if __name__ == '__main__':
-    # save_dir = '../models/new_epoch_60_pr_0.5045'
+    save_dir = '../models/doc_5000_warm_epoch_100_pr_0.5418023887079262'
     # save_dir = '../models/new_epoch_40_pr_0.4935'
-    save_dir = '../models/para_10000_200_warm_best_4gpu'
+    # save_dir = '../models/para_10000_200_warm_best_4gpu'
     # save_dir = '../models/para_10000_500_warm_best'
     # save_dir = '../models/para_20000_200_warm_best_4gpu'
     # save_dir = '../models/sent_53019_441_warm_best_4gpu'
     # save_dir = '../models/para_50000_500_warm_best'
     # save_dir = '../models/sent_53019_441_warm_best'
 
-    cls = torch.load(save_dir).module
+    cls = torch.load(save_dir)
     cls.to(device)
     # if torch.cuda.device_count() > 1:
     #     model = torch.nn.DataParallel(cls, [i for i in range(torch.cuda.device_count())])

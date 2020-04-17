@@ -1,27 +1,37 @@
 import json
 
+from tqdm import tqdm
+
 _stage = ['train', 'dev', 'test']
-stage = _stage[0]
+stage = _stage[1]
 
 _obj = ['doc', 'para']
 obj = _obj[0]
 
-_source =['search','zhidao']
-source = _source[1]
 
+# _source =['search','zhidao']
+# source = _source[1]
 
-first_num = 20000
+ssource = 'full'
 
-file_path = '../../../preprocessed/' + stage + 'set/'+ source +'.' + stage + '.json'
+first_num = 1000
+# first_num = 'all'
+otp = 1
 
-save_path = '../../data/' + obj + '.' + source +'.' + stage + '.json'
 
 file = []
-with open(file_path, 'r', encoding='utf-8') as f:
-    file += f.readlines()
+
+
+for source in ['search','zhidao']:
+    file_path = '../../../preprocessed/' + stage + 'set/'+ source +'.' + stage + '.json'
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        file += f.readlines()[:]
+
+print(len(file))
 
 data = []
-for line in file[:first_num]:
+for line in tqdm(file[:]):
     js = json.loads(line)
     dcms = js['documents']
     ques = js['question']
@@ -42,6 +52,17 @@ for line in file[:first_num]:
                 label = 1
             data.append({"label": label, 'question':ques, 'text': text})
 
+print(len(data))
+
+save_path = '../../data/version3_' + obj + '_' + ssource + '_' + stage + '_' + str(len(data)) + '.json'
+
+
 with open(save_path, 'w', encoding='utf-8') as json_file:
     for each_dict in data:
         json_file.write(json.dumps(each_dict) + '\n')
+
+
+
+
+
+

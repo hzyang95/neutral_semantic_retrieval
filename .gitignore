@@ -109,7 +109,7 @@ venv.bak/
 .history
 .DS_Store
 
-/data/
-/models/
+data/
+models/
 
 .idea/

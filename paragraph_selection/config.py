@@ -12,7 +12,7 @@ def set_args():
                         default='../models/para_10000_500_warm_best')
     parser.add_argument("--gra",
                         type=str,
-                        default='para')
+                        default='sent')
     # parser.add_argument("--output_path", type=str)
     parser.add_argument("--train_data",
                         default="../data/para.train.json",
@@ -68,11 +68,11 @@ def set_args():
                         action='store_true',
                         help="Set this flag if you are using an uncased model.")
     parser.add_argument("--train_batch_size",
-                        default=56,
+                        default=60,
                         type=int,
                         help="Total batch size for training.")
     parser.add_argument("--eval_batch_size",
-                        default=28,
+                        default=30,
                         type=int,
                         help="Total batch size for eval.")
     parser.add_argument("--learning_rate",

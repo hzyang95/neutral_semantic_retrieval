@@ -86,7 +86,7 @@ class DataProcessor(object):
         examples = []
         with open(path, 'r', encoding='utf-8') as f:
             file = f.readlines()
-        for i, line in enumerate(file[:top]):
+        for i, line in enumerate(file[:]):
             row = json.loads(line)
             samples = []
             for item in row['sample']:
@@ -104,23 +104,17 @@ class DataProcessor(object):
         examples = []
         with open(path, 'r', encoding='utf-8') as f:
             file = f.readlines()
-        print(len(file))
-        print(top)
-        for i, line in enumerate(file):
+        for i, line in enumerate(file[top:top + top]):
             row = json.loads(line)
             samples = []
-            ll=0
             for item in row['sample']:
                 guid = "%s-%s" % (set_type, i)
                 text_a = item['question']
                 # text_b = '{} {}'.format(row['context'], row['title'])
                 text_b = '{}'.format(item['text'])
-                ll += len(item['text'])
                 label = item['label']
                 samples.append(
                     InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-            if ll>300:
-                continue
             examples.append(samples)
         return examples
 

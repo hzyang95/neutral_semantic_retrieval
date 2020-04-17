@@ -1,2 +1,7 @@
+torch
+transformers
+numpy
+tensorboardX
+tqdm
 PyYAML==5.1.1
 pytest
