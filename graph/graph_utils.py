@@ -12,7 +12,6 @@ def load_torch_model(model_path, use_cuda=True):
         else:
             model = torch.load(f, map_location=lambda storage, loc: storage)
             model.cpu()
-        model.eval()
         return model
 
 
@@ -118,6 +117,77 @@ def get_batches(features, is_train=False):
         data = TensorDataset(input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end, input_sp_label)
     else:
         data = TensorDataset(input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end)
+
+    # all_input_ids = torch.tensor([f['input_ids'] for f in features], dtype=torch.long)
+    # all_input_mask = torch.tensor([f['input_mask'] for f in features], dtype=torch.long)
+    # all_segment_ids = torch.tensor([f['segment_ids'] for f in features], dtype=torch.long)
+    # if is_train:
+    #     all_label_ids = torch.tensor([f['label_id'] for f in features], dtype=torch.long)
+    #     data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+    # else:
+    #     data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids)
+
+    return data
+
+def get_batches_sent(features, is_train=False):
+    start = time.time()
+
+    def get_batch_stat(features):
+        max_sent_num = 0
+        for d in features:
+            if d.sent_num > max_sent_num:
+                max_sent_num = d.sent_num
+
+        return max_sent_num
+
+    max_nodes = get_batch_stat(features)
+    print(max_nodes)
+    # batching
+    minibatch_size = len(features)
+    input_len = len(features[0].input_ids)
+    max_sent_len = len(features[0].input_ids[0])
+    input_ids = torch.zeros(minibatch_size, max_nodes, max_sent_len, dtype=torch.long)
+    input_mask = torch.zeros(minibatch_size, max_nodes, max_sent_len, dtype=torch.long)
+    segment_ids = torch.zeros(minibatch_size, max_nodes, max_sent_len, dtype=torch.long)
+    input_graph_mask = torch.zeros(minibatch_size, max_nodes)
+    sent_num = torch.zeros(minibatch_size)
+    for fi, f in enumerate(features):
+        # print(f.sent_num)
+        # print(len(f.input_ids))
+        input_ids[fi, :f.sent_num] = torch.tensor(f.input_ids, dtype=torch.long)
+        input_mask[fi, :f.sent_num] = torch.tensor(f.input_mask, dtype=torch.long)
+        segment_ids[fi, :f.sent_num] = torch.tensor(f.segment_ids, dtype=torch.long)
+        # input_graph_mask[fi] = torch.tensor(f.graph_mask, dtype=torch.long)
+        sent_num[fi] = torch.tensor(f.sent_num, dtype=torch.long)
+    if is_train:
+        input_sp_label = torch.zeros(minibatch_size, max_nodes)
+    for di, d in enumerate(features):
+        for si in range(d.sent_num):
+            input_graph_mask[di, si] = 1  # sent_mask
+            if is_train:
+                input_sp_label[di, si] = d.sp_label[si]
+    sent_start = -1 * torch.ones(minibatch_size, max_nodes, dtype=torch.long)
+    sent_end = -1 * torch.ones(minibatch_size, max_nodes, dtype=torch.long)
+
+    adj_matrix = gen_adj_matrix(features, max_nodes,
+                                wdedge=True, quesedge=False, adedge=False)
+
+    # nodes configuration: [cands, docs, mentions, subs]
+    # for di, d in enumerate(features):
+    #     for si in range(len(d.sent_start)):
+    #         if d.sent_start[si] < input_len:
+    #             input_graph_mask[di, si] = 1  # sent_mask
+    #             if is_train:
+    #                 input_sp_label[di, si] = d.sp_label[si]
+    #         else:
+    #             print("Some sentences in sample {} were cut!".format(d.example_index))
+    #     sent_start[di, :len(d.sent_start)] = torch.tensor(d.sent_start)
+    #     sent_end[di, :len(d.sent_start)] = torch.tensor(d.sent_end)
+
+    if is_train:
+        data = TensorDataset(input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end, input_sp_label,sent_num)
+    else:
+        data = TensorDataset(input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end,sent_num)
 
     # all_input_ids = torch.tensor([f['input_ids'] for f in features], dtype=torch.long)
     # all_input_mask = torch.tensor([f['input_mask'] for f in features], dtype=torch.long)

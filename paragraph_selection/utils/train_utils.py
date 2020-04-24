@@ -103,9 +103,9 @@ def process_logit(batch_index, batch_logits,_sent_len):
         # print(len(pred_sp_idx))
         # print(_sent_len[idx])
 
-        # top = 4
-        # tops = torch.topk(torch.tensor(sp_logits_np[idx, :]), min(top, _sent_len[idx]), dim=0)
-        # print(tops)
+        top = 4
+        # tops = torch.topk(torch.tensor(pred_sp_idx), min(top, _sent_len[idx]), dim=0)
+
         # if len(pred_sp_idx) != 0:
         #     sp_pred+=get_sp_pred(pred_sp_idx, predict_examples[idx])
 

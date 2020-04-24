@@ -19,6 +19,12 @@ class InputFeatures(object):
         self.label_id = label_id
 
 
+def check_contain_chinese(check_str):
+    for ch in check_str:
+        if '\u4e00' <= ch <= '\u9fff':
+            return True
+    return False
+
 class DataProcessor(object):
 
     def get_train_examples(self, data_dir, top):
@@ -54,34 +60,8 @@ class DataProcessor(object):
             label = row['label']
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-        # for (i, row) in df.iterrows():
-        #     guid = "%s-%s" % (set_type, i)
-        #     text_a = row['question']
-        #     # text_b = '{} {}'.format(row['context'], row['title'])
-        #     text_b = '{}'.format(row['context'])
-        #     label = row['label']
-        #     examples.append(
-        #         InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 
-    # def _create_examples_dev(self, path, set_type, top):
-    #         examples = []
-    #         with open(path, 'r', encoding='utf-8') as f:
-    #             file = f.readlines()
-    #         num = 0
-    #         for i, line in enumerate(file[:top]):
-    #             row = json.loads(line)
-    #             for item in row['sample']:
-    #                 num += 1
-    #                 guid = "%s-%s" % (set_type, num)
-    #                 text_a = item['question']
-    #                 # text_b = '{} {}'.format(row['context'], row['title'])
-    #                 text_b = '{}'.format(item['text'])
-    #                 label = item['label']
-    #                 examples.append(
-    #                     InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-    #
-    #         return examples
     def _create_examples_dev(self, path, set_type, top):
         examples = []
         with open(path, 'r', encoding='utf-8') as f:
@@ -106,11 +86,34 @@ class DataProcessor(object):
             file = f.readlines()
         print(len(file))
         print(top)
+        _aver = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        nnnn = 0
+        neg = []
+        neg_long = []
+        # lb0 = 0
         for i, line in enumerate(file):
             row = json.loads(line)
             samples = []
+            question = row['question']
             ll=0
             for item in row['sample']:
+                lll = len(item['text'])
+                # print(ll)
+                if check_contain_chinese(item['text']) is False:
+                    continue
+                # if lll // 100 < 4:
+                #     _aver[lll // 100] += 1
+                # else:
+                #     _aver[4] += 1
+                #     # print(lll)
+                #     # print(item['text'])
+                if lll < 5:
+                    neg.append(question + ':    ' + item['text'])
+                    continue
+                if lll > 200:
+                    # if lll < 300:
+                    neg_long.append(question + ':   ' + item['text'])
+                    continue
                 guid = "%s-%s" % (set_type, i)
                 text_a = item['question']
                 # text_b = '{} {}'.format(row['context'], row['title'])
@@ -119,9 +122,26 @@ class DataProcessor(object):
                 label = item['label']
                 samples.append(
                     InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-            if ll>300:
+            # if ll>300:
+            #     continue
+            if len(samples) == 0:
                 continue
+            lll = len(samples)
+            if lll // 10 < 3:
+                _aver[lll // 10] += 1
+            else:
+                _aver[3] += 1
+                # print(ll)
+                # print(samples)
             examples.append(samples)
+        print(_aver)
+        print(len(neg))
+        # print('\n'.join(neg[:10]))
+        print(len(neg_long))
+        # print('\n'.join(neg_long[:10]))
+        # print(nnnn)
+        # print(lb0)
+        print(len(examples))
         return examples
 
 
@@ -231,3 +251,14 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
             tokens_a.pop()
         else:
             tokens_b.pop()
+
+if __name__ == "__main__":
+    dataset = [
+        'data_for_graph_train.v1.30000.143127.2.8.41.json',
+        'data_for_graph_valid.2000.10115.3.7.41.json',
+        'data_for_graph_test.3000.13848.3.9.40.json'
+    ]
+    dt = DataProcessor()
+    for i in range(3):
+        dt.create_examples_test('../data/'+dataset[i], 'test', False)
+

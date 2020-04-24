@@ -96,6 +96,8 @@ class DisGraphBasedModel(DistilBertPreTrainedModel):
 
         self.hidden_size = int(config.hidden_size / 2)
 
+        self.ori_hidden = int(config.hidden_size)
+
         self.sent_selfatt = nn.Sequential(nn.Linear(config.hidden_size, self.hidden_size), GeLU(),
                                           nn.Dropout(self.dropout), nn.Linear(self.hidden_size, 1))
 
@@ -266,6 +268,8 @@ class GraphBasedModel(BertPreTrainedModel):
 
         self.hidden_size = int(config.hidden_size / 2)
 
+        self.ori_hidden = int(config.hidden_size)
+
         self.sent_selfatt = nn.Sequential(nn.Linear(config.hidden_size, self.hidden_size), GeLU(),
                                           nn.Dropout(self.dropout), nn.Linear(self.hidden_size, 1))
 
@@ -318,7 +322,7 @@ class GraphBasedModel(BertPreTrainedModel):
         return output
 
     def forward(self, input_ids, input_mask, segment_ids, adj_matrix, graph_mask, sent_start,
-                sent_end, sp_label=None, sent_sum_way='attn', ):
+                sent_end, sent_num=None ,sp_label=None, sent_sum_way='attn', gtem='ori'):
 
         """
         input_ids: bs X num_doc X num_sent X sent_len
@@ -331,54 +335,72 @@ class GraphBasedModel(BertPreTrainedModel):
         # Roberta doesn't use token_type_ids cause there is no NSP task
         segment_ids = torch.zeros_like(segment_ids).to(input_ids.device)
 
-        # reshaping
-        bs, sent_len = input_ids.size()
-        max_nodes = adj_matrix.size(-1)
+        if gtem == 'ori':
+            # reshaping
+            bs, sent_len = input_ids.size()
+            max_nodes = adj_matrix.size(-1)
 
-        sequence_output, cls_output = self.bert(input_ids, token_type_ids=segment_ids,
-                                                attention_mask=input_mask)
+            sequence_output, cls_output = self.bert(input_ids, token_type_ids=segment_ids,
+                                                    attention_mask=input_mask)
 
-        feat_dim = cls_output.size(-1)
+            feat_dim = cls_output.size(-1)
 
-        # sentence extraction
-        per_sent_len = sent_end - sent_start
-        max_sent_len = torch.max(sent_end - sent_start)
-        if self.sent_with_cls:
-            per_sent_len += 1
-            max_sent_len += 1
-        # print("Maximum sent length is {}".format(max_sent_len))
-        sent_output = torch.zeros(bs, max_nodes, max_sent_len, feat_dim).to(input_ids.device)
-        for i in range(bs):
-            for j in range(max_nodes):
-                if sent_end[i, j] <= sent_len:
-                    if sent_start[i, j] != -1 and sent_end[i, j] != -1:
-                        if not self.sent_with_cls:
-                            sent_output[i, j, :(sent_end[i, j] - sent_start[i, j]), :] = sequence_output[i,
-                                                                                         sent_start[i, j]:sent_end[
-                                                                                             i, j], :]
-                        else:
-                            sent_output[i, j, 1:(sent_end[i, j] - sent_start[i, j]) + 1, :] = sequence_output[i,
-                                                                                              sent_start[i, j]:sent_end[
-                                                                                                  i, j], :]
-                            sent_output[i, j, 0, :] = cls_output[i]
-                else:
-                    if sent_start[i, j] < sent_len:
-                        if not self.sent_with_cls:
-                            sent_output[i, j, :(sent_len - sent_start[i, j]), :] = sequence_output[i,
-                                                                                   sent_start[i, j]:sent_len, :]
-                        else:
-                            sent_output[i, j, 1:(sent_len - sent_start[i, j]) + 1, :] = sequence_output[i,
-                                                                                        sent_start[i, j]:sent_len, :]
-                            sent_output[i, j, 0, :] = cls_output[i]
+            # sentence extraction
+            per_sent_len = sent_end - sent_start
+            max_sent_len = torch.max(sent_end - sent_start)
+            if self.sent_with_cls:
+                per_sent_len += 1
+                max_sent_len += 1
+            # print("Maximum sent length is {}".format(max_sent_len))
+            sent_output = torch.zeros(bs, max_nodes, max_sent_len, feat_dim).to(input_ids.device)
+            for i in range(bs):
+                for j in range(max_nodes):
+                    if sent_end[i, j] <= sent_len:
+                        if sent_start[i, j] != -1 and sent_end[i, j] != -1:
+                            if not self.sent_with_cls:
+                                sent_output[i, j, :(sent_end[i, j] - sent_start[i, j]), :] = sequence_output[i,
+                                                                                             sent_start[i, j]:sent_end[
+                                                                                                 i, j], :]
+                            else:
+                                sent_output[i, j, 1:(sent_end[i, j] - sent_start[i, j]) + 1, :] = sequence_output[i,
+                                                                                                  sent_start[i, j]:
+                                                                                                  sent_end[
+                                                                                                      i, j], :]
+                                sent_output[i, j, 0, :] = cls_output[i]
+                    else:
+                        if sent_start[i, j] < sent_len:
+                            if not self.sent_with_cls:
+                                sent_output[i, j, :(sent_len - sent_start[i, j]), :] = sequence_output[i,
+                                                                                       sent_start[i, j]:sent_len, :]
+                            else:
+                                sent_output[i, j, 1:(sent_len - sent_start[i, j]) + 1, :] = sequence_output[i,
+                                                                                            sent_start[i, j]:sent_len,
+                                                                                            :]
+                                sent_output[i, j, 0, :] = cls_output[i]
 
-        # sent summarization
-        if sent_sum_way == 'avg':
-            sent_sum_output = sent_output.mean(dim=2)
-        elif sent_sum_way == 'attn':
-            sent_sum_output = self.do_selfatt(
-                sent_output.contiguous().view(bs * max_nodes, max_sent_len, self.config.hidden_size).transpose(0,
-                                                                                                               1), \
-                per_sent_len.view(bs * max_nodes), self.sent_selfatt).view(bs, max_nodes, -1)
+            # sent summarization
+            if sent_sum_way == 'avg':
+                sent_sum_output = sent_output.mean(dim=2)
+            elif sent_sum_way == 'attn':
+                sent_sum_output = self.do_selfatt(
+                    sent_output.contiguous().view(bs * max_nodes, max_sent_len, self.config.hidden_size).transpose(0,
+                                                                                                                   1),
+                    per_sent_len.view(bs * max_nodes), self.sent_selfatt).view(bs, max_nodes, -1)
+        else:
+            bs, sl, sent_len = input_ids.size()
+            max_nodes = adj_matrix.size(-1)
+            sent_sum_output = torch.zeros(bs, max_nodes, self.ori_hidden).to(input_ids.device)
+            for i in range(bs):
+                # print(sent_num[i])
+                ll = int(sent_num[i])
+                temp = ll
+                while temp>50:
+                    sent_sum_output[i, ll-temp:ll-temp+50, :] = self.bert(input_ids[i,ll-temp:ll-temp+50], token_type_ids=segment_ids[i,ll-temp:ll-temp+50],
+                                                           attention_mask=input_mask[i, ll-temp:ll-temp+50])[1].squeeze(0)
+                    temp -= 50
+                sent_sum_output[i, ll-temp:ll, :] = self.bert(input_ids[i,:ll], token_type_ids=segment_ids[i,:ll],
+                                                         attention_mask=input_mask[i,:ll])[1].squeeze(0)
+
 
         # graph reasoning
         if not self.no_gnn and self.num_rel > 0:

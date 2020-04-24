@@ -15,9 +15,9 @@ from collections import Counter
 from transformers import BertTokenizer,DistilBertTokenizer
 from transformers import BertForSequenceClassification,DistilBertForSequenceClassification
 
-from graph.utils.train_utils import log_prf_single
+from utils.train_utils import log_prf_single
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 print(torch.cuda.device_count())
 
 
@@ -123,6 +123,11 @@ def evaluate(top, dis):
             else:
                 sigmoid = torch.nn.Sigmoid()
                 logits = sigmoid(logits)
+                print(logits)
+                # ind = [0] * b_l
+                # pred_sp_idx = [x[0] for x in enumerate(logits.tolist()) if x[1][0] > 0.5]
+                # for ii in pred_sp_idx:
+                #     ind[ii] = 1
                 tops = torch.topk(logits, min(top, b_l), dim=0)
                 ind = [0] * b_l
                 for ii in tops[1]:
@@ -168,9 +173,11 @@ if __name__ == "__main__":
         # '1_200000_1000_Evaluation_epoch2_step5250_ckpt_loss0.07530771999424973.bin',
         # '2_para_200000_1000_1e-5_Evaluation_epoch2_step10500_ckpt_loss0.07275297016305225.bin',
         # 'checkpoints/sentretri_1024_hfl_rbt3_7_8480_6817/model.pt',
-        'checkpoints/sentretri_dis_512_distilbert-base-multilingual-cased_11_25199_6750/model.pt',
+        # 'checkpoints/sentretri_1024_hfl_rbt3_4_5300_6917/model.pt',
+
+        # 'checkpoints/sentretri_dis_512_distilbert-base-multilingual-cased_11_25199_6750/model.pt',
         # '0_para_200000_1000_Evaluation_epoch2_step9500_ckpt_f1_0.6485172581429266.bin',
-        '1_para_200000_1000_Evaluation_epoch2_step6000_f10.6517_loss0.1892.bin',
+        # '1_para_200000_1000_Evaluation_epoch2_step6000_f10.6517_loss0.1892.bin',
         # '2_para_200000_1000_Evaluation_epoch2_step8500_f1_0.6378_loss0.1719.bin',
 
         # '0_sent_1000000_5000_Evaluation_top4_epoch2_step9500_f10.6506_loss0.1755.bin',
@@ -183,7 +190,9 @@ if __name__ == "__main__":
     dis = 0
     if args.gra == 'sent':
         args.train_data = '../data/sent_train.v1.35000.1205950.0.1.41.json'
-        args.dev_data = '../data/sent_valid.10000.23421.3.8.41.json'
+        args.dev_data = '../data/data_for_graph_test.3000.13848.3.9.40.json'
+        # data_for_graph_test.3000.13848.3.9.40.json
+        # sent_valid.10000.23421.3.8.41.json
         args.max_seq_length = 50
         args.train_batch_size *= 5
         args.eval_batch_size *= 5
@@ -206,7 +215,8 @@ if __name__ == "__main__":
             args.bert_model = 'bert-base-multilingual-cased'
         if path[0] == 'c':
             dis=4
-            args.bert_model = 'distilbert-base-multilingual-cased'
+            # args.bert_model = 'distilbert-base-multilingual-cased'
+            args.bert_model = 'hfl/rbt3'
         if  dis != 4:
             model_state_dict = torch.load('checkpoints/' + path)  # args.ckpt_
         if dis == 1:
@@ -218,8 +228,8 @@ if __name__ == "__main__":
             model = torch.load(path)
             model = model.module
             model.cuda()
-            tokenizer = DistilBertTokenizer.from_pretrained(args.bert_model)
-            # tokenizer = BertTokenizer.from_pretrained('hfl/rbt3')
+            # tokenizer = DistilBertTokenizer.from_pretrained(args.bert_model)
+            tokenizer = BertTokenizer.from_pretrained('hfl/rbt3')
 
         else:
             model = BertForSequenceClassification.from_pretrained(args.bert_model, state_dict=model_state_dict, num_labels=1)
