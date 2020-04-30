@@ -49,19 +49,19 @@ class DataProcessor(object):
             row = json.loads(line)
             guid = "%s-%s" % (set_type, i)
             text_a = row['question']
-            # text_b = '{} {}'.format(row['context'], row['title'])
+            # answer = '{} {}'.format(row['context'], row['title'])
             text_b = '{}'.format(row['text'])
             label = row['label']
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         # for (i, row) in df.iterrows():
         #     guid = "%s-%s" % (set_type, i)
-        #     text_a = row['question']
-        #     # text_b = '{} {}'.format(row['context'], row['title'])
-        #     text_b = '{}'.format(row['context'])
+        #     question = row['question']
+        #     # answer = '{} {}'.format(row['context'], row['title'])
+        #     answer = '{}'.format(row['context'])
         #     label = row['label']
         #     examples.append(
-        #         InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        #         InputExample(guid=guid, question=question, answer=answer, label=label))
         return examples
 
     # def _create_examples_dev(self, path, set_type, top):
@@ -74,12 +74,12 @@ class DataProcessor(object):
     #             for item in row['sample']:
     #                 num += 1
     #                 guid = "%s-%s" % (set_type, num)
-    #                 text_a = item['question']
-    #                 # text_b = '{} {}'.format(row['context'], row['title'])
-    #                 text_b = '{}'.format(item['text'])
+    #                 question = item['question']
+    #                 # answer = '{} {}'.format(row['context'], row['title'])
+    #                 answer = '{}'.format(item['text'])
     #                 label = item['label']
     #                 examples.append(
-    #                     InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+    #                     InputExample(guid=guid, question=question, answer=answer, label=label))
     #
     #         return examples
     def _create_examples_dev(self, path, set_type, top):
@@ -92,7 +92,7 @@ class DataProcessor(object):
             for item in row['sample']:
                 guid = "%s-%s" % (set_type, i)
                 text_a = item['question']
-                # text_b = '{} {}'.format(row['context'], row['title'])
+                # answer = '{} {}'.format(row['context'], row['title'])
                 text_b = '{}'.format(item['text'])
                 label = item['label']
                 samples.append(
@@ -110,7 +110,7 @@ class DataProcessor(object):
             for item in row['sample']:
                 guid = "%s-%s" % (set_type, i)
                 text_a = item['question']
-                # text_b = '{} {}'.format(row['context'], row['title'])
+                # answer = '{} {}'.format(row['context'], row['title'])
                 text_b = '{}'.format(item['text'])
                 label = item['label']
                 samples.append(

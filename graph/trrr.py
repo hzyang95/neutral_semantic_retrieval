@@ -11,18 +11,18 @@ from tqdm import tqdm
 from transformers import BertTokenizer, DistilBertTokenizer, AdamW, BertConfig, get_linear_schedule_with_warmup
 from transformers import BertForSequenceClassification, DistilBertForSequenceClassification
 
+from data_processor_ques import DataProcessorFull
 from graph_model import GraphBasedModel, DisGraphBasedModel
 from config import set_args
-from utils.train_utils import log_prf_single, pickle_to_data, data_to_pickle, process_logit
+from utils.eval_utils import log_prf_single, process_logit
 
-from data_processor import DataProcessor, convert_examples_to_features
+from data_processor import DataProcessor
+from utils.train_utils import convert_examples_to_features, convert_examples_to_features_sent, get_batches, \
+    get_batches_sent, convert_examples_to_features_sent_ques
 
-from graph_utils import load_torch_model, get_batches
+from utils.tools import load_torch_model, pickle_to_data, data_to_pickle
 
 import logging
-
-from data_processor import convert_examples_to_features_sent
-from graph_utils import get_batches_sent
 
 t = str(time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
 logging.basicConfig(level=logging.DEBUG,
@@ -185,7 +185,7 @@ def train(model, tokenizer, dataset):
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.lr, eps=args.adam_epsilon)
     scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup_steps * _t_total), _t_total)
 
-    t_total = len(train_dataloader)* args.epochs
+    t_total = len(train_dataloader) * args.epochs
     aver_loss = 0.0
     for i in range(args.epochs):
         logging.info('=======epoch ' + str(i) + '=========')
@@ -257,9 +257,6 @@ def train(model, tokenizer, dataset):
             if (all_step) % args.eval_step == 0:
                 eval_loss, res = test(model, tokenizer, dataset['dev'])
                 # if res > _max:
-                #     _max = res
-                #     best = model
-                #     ind = str(i) + '_' + str(all_step)
                 if eval_loss < _min:
                     _min = eval_loss
                     _max = res
@@ -284,9 +281,6 @@ def train(model, tokenizer, dataset):
 
         eval_loss, res = test(model, tokenizer, dataset['dev'])
         # if res > _max:
-        #     _max = res
-        #     best = model
-        #     ind = str(i) + '_' + str(all_step)
         if eval_loss < _min:
             _min = eval_loss
             _max = res
@@ -303,9 +297,15 @@ def train(model, tokenizer, dataset):
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
                 torch.save(best, save_path + '/model.pt')
+            # _save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
+            # '_') + '_epoch' + str( i) + '_' + str(_min)[2:6] + '_' + str(_max)[2:6] if not os.path.exists(
+            # _save_path): os.makedirs(_save_path) torch.save(model, _save_path + '/model.pt')
         if es >= 15:
             logging.info('stop at ' + str(i) + '_' + str(all_step))
             break
+    # _save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
+    # '_') + '_lastepoch_' + str( ind) if not os.path.exists(_save_path): os.makedirs(_save_path) torch.save(model,
+    # _save_path + '/model.pt')
     return best, ind
     # print(test(model,dataset))
 
@@ -322,23 +322,40 @@ if __name__ == "__main__":
         tokenizer = DistilBertTokenizer.from_pretrained(args.model)
     else:
         tokenizer = BertTokenizer.from_pretrained(args.model)
-
+    if args.full_pas:
+        processor = DataProcessorFull()
+    else:
+        processor = DataProcessor()
     # 2. load dataset
     if not args.is_test:
         if args.raw:
             # dict_keys(['training', 'validation', 'test'])
-            processor = DataProcessor()
-            T = False
-            dataset = {'train': processor.create_examples(args.train_data, 'train', T, sent=args.sent),
-                       'dev': processor.create_examples(args.dev_data, 'dev', T, sent=args.sent),
-                       'test': processor.create_examples(args.test_data, 'test', T, sent=args.sent)}
+            if args.testbatch:
+                T = True
+            else:
+                T = False
+            if args.full_pas:
+                dataset = {'train': processor.create_examples(args.train_data_full+'.ety', 'train', T, sent=args.sent),
+                           'dev': processor.create_examples(args.dev_data_full+'.ety', 'dev', T, sent=args.sent),
+                           'test': processor.create_examples(args.test_data_full+'.ety', 'test', T, sent=args.sent)}
+
+            else:
+                dataset = {'train': processor.create_examples(args.train_data, 'train', T, sent=args.sent),
+                           'dev': processor.create_examples(args.dev_data, 'dev', T, sent=args.sent),
+                           'test': processor.create_examples(args.test_data, 'test', T, sent=args.sent)}
             # 3. test, proceed, train
             for i in dataset:
                 logging.info(i + ' length: ' + str(len(dataset[i])))
                 if args.sent:
-                    features = convert_examples_to_features_sent(
-                        dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
-                    data = get_batches_sent(features, is_train=True)
+                    if args.full_pas:
+                        features = convert_examples_to_features_sent_ques(
+                            dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer,
+                            is_train=True)
+                        data = get_batches_sent(features, is_train=True, full_pas=True)
+                    else:
+                        features = convert_examples_to_features_sent(
+                            dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
+                        data = get_batches_sent(features, is_train=True)
                 else:
                     features = convert_examples_to_features(
                         dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
@@ -350,8 +367,10 @@ if __name__ == "__main__":
 
     if args.is_test:
         print(args.sent)
-        processor = DataProcessor()
-        dt = processor.create_examples(args.test_data, 'test', False, sent=args.sent)
+        if args.full_pas:
+            dt = processor.create_examples(args.test_data_full + 'ety', 'test', False, sent=args.sent)
+        else:
+            dt = processor.create_examples(args.test_data, 'test', False, sent=args.sent)
         # features = convert_examples_to_features(
         #     dt, [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
         # data = get_batches(features, is_train=True)
@@ -366,6 +385,8 @@ if __name__ == "__main__":
                 dt, [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
             data = get_batches(features, is_train=True)
         model = load_torch_model(args.save, use_cuda=args.cuda)
+        # if args.sent:
+        #     model = model.module
         if torch.cuda.is_available():
             if not args.cuda:
                 print("Waring: You have a CUDA device, so you should probably run with --cuda")

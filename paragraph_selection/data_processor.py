@@ -55,7 +55,7 @@ class DataProcessor(object):
             row = json.loads(line)
             guid = "%s-%s" % (set_type, i)
             text_a = row['question']
-            # text_b = '{} {}'.format(row['context'], row['title'])
+            # answer = '{} {}'.format(row['context'], row['title'])
             text_b = '{}'.format(row['text'])
             label = row['label']
             examples.append(
@@ -72,7 +72,7 @@ class DataProcessor(object):
             for item in row['sample']:
                 guid = "%s-%s" % (set_type, i)
                 text_a = item['question']
-                # text_b = '{} {}'.format(row['context'], row['title'])
+                # answer = '{} {}'.format(row['context'], row['title'])
                 text_b = '{}'.format(item['text'])
                 label = item['label']
                 samples.append(
@@ -116,7 +116,7 @@ class DataProcessor(object):
                     continue
                 guid = "%s-%s" % (set_type, i)
                 text_a = item['question']
-                # text_b = '{} {}'.format(row['context'], row['title'])
+                # answer = '{} {}'.format(row['context'], row['title'])
                 text_b = '{}'.format(item['text'])
                 ll += len(item['text'])
                 label = item['label']

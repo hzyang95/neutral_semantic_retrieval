@@ -40,7 +40,7 @@ def get_test_data(example):
     for i,item in enumerate(row):
         guid = "%s-%s" % ('test', i)
         text_a = item['question']
-        # text_b = '{} {}'.format(row['context'], row['title'])
+        # answer = '{} {}'.format(row['context'], row['title'])
         text_b = '{}'.format(item['text'])
         label = item['label']
         samples.append(

@@ -322,7 +322,7 @@ class GraphBasedModel(BertPreTrainedModel):
         return output
 
     def forward(self, input_ids, input_mask, segment_ids, adj_matrix, graph_mask, sent_start,
-                sent_end, sent_num=None ,sp_label=None, sent_sum_way='attn', gtem='ori'):
+                sent_end, sent_num=None, sp_label=None, sent_sum_way='attn', gtem='ori'):
 
         """
         input_ids: bs X num_doc X num_sent X sent_len
@@ -393,14 +393,19 @@ class GraphBasedModel(BertPreTrainedModel):
             for i in range(bs):
                 # print(sent_num[i])
                 ll = int(sent_num[i])
-                temp = ll
-                while temp>50:
-                    sent_sum_output[i, ll-temp:ll-temp+50, :] = self.bert(input_ids[i,ll-temp:ll-temp+50], token_type_ids=segment_ids[i,ll-temp:ll-temp+50],
-                                                           attention_mask=input_mask[i, ll-temp:ll-temp+50])[1].squeeze(0)
-                    temp -= 50
-                sent_sum_output[i, ll-temp:ll, :] = self.bert(input_ids[i,:ll], token_type_ids=segment_ids[i,:ll],
-                                                         attention_mask=input_mask[i,:ll])[1].squeeze(0)
-
+                sent_sum_output[i, :ll, :] = self.bert(input_ids[i, :ll], token_type_ids=segment_ids[i, :ll],
+                                                       attention_mask=input_mask[i, :ll])[1].squeeze(0)
+                # temp = ll
+                # while temp > 50:
+                #     sent_sum_output[i, ll - temp:ll - temp + 50, :] = self.bert(input_ids[i, ll - temp:ll - temp + 50],
+                #                                                                 token_type_ids=segment_ids[i,
+                #                                                                                ll - temp:ll - temp + 50],
+                #                                                                 attention_mask=input_mask[i,
+                #                                                                                ll - temp:ll - temp + 50])[
+                #         1].squeeze(0)
+                #     temp -= 50
+                # sent_sum_output[i, ll - temp:ll, :] = self.bert(input_ids[i, :ll], token_type_ids=segment_ids[i, :ll],
+                #                                                 attention_mask=input_mask[i, :ll])[1].squeeze(0)
 
         # graph reasoning
         if not self.no_gnn and self.num_rel > 0:

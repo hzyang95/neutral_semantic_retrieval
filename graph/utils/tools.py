@@ -1,5 +1,8 @@
 import random
 import copy
+
+import torch
+
 random.seed(123456)
 
 
@@ -29,3 +32,32 @@ if __name__ == "__main__":
     shuffle(a6, seed=123456)
     print(a3)
     print(a6)
+
+
+def load_torch_model(model_path, use_cuda=True):
+    with open(model_path + "/model.pt", "rb") as f:
+        if use_cuda:
+            model = torch.load(f)
+        else:
+            model = torch.load(f, map_location=lambda storage, loc: storage)
+            model.cpu()
+        return model
+
+
+def pickle_to_data(in_file):
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+    with open(in_file, 'rb') as f:
+        your_dict = pickle.load(f)
+        return your_dict
+
+
+def data_to_pickle(your_dict, out_file):
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+    with open(out_file, 'wb') as f:
+        pickle.dump(your_dict, f,protocol = 4)
