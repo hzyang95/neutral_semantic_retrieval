@@ -24,11 +24,17 @@ from utils.tools import load_torch_model, pickle_to_data, data_to_pickle
 
 import logging
 
-t = str(time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
+args = set_args()
+
+title = args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/', '_')
+if args.testbatch:
+    t = 'testlog'
+else:
+    t = str(time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-6s %(levelname)-6s %(message)s',
                     datefmt='%m-%d %H:%M',
-                    filename='mt_' + t + '.log',  # ' + t + '
+                    filename='mt_' + t + '_' + title + '.log',  # ' + t + '
                     filemode='w')
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
@@ -46,7 +52,6 @@ logging.info('begin')
 
 sys.path.append('../')
 
-args = set_args()
 logging.info(args)
 
 torch.manual_seed(args.seed)
@@ -62,7 +67,7 @@ logging.info('n_gpu:' + str(n_gpu))
 # tokenizer = BertTokenizer.from_pretrained('hfl/rbt3')
 # model = BertModel.from_pretrained('hfl/rbt3')
 
-def test(model, tokenizer, test_data):
+def test(model, tokenizer, test_data, threshold):
     # model = model.module
     _ri = []
     _pr = []
@@ -73,8 +78,8 @@ def test(model, tokenizer, test_data):
     test_data = DataLoader(test_data, batch_size=args.test_batch_size)
     with torch.no_grad():
         for step, batch in enumerate(tqdm(test_data)):
-            if step < 5:
-                print(len(batch))
+            # if step < 5:
+            #     print(len(batch))
             if args.cuda:
                 batch = tuple(t.cuda() for t in batch)
 
@@ -91,7 +96,8 @@ def test(model, tokenizer, test_data):
                           'sent_sum_way': args.sent_sum_way,
                           'sp_label': input_sp_label,
                           'sent_num': sent_num,
-                          'gtem': 'sent'
+                          'gtem': 'sent',
+                          'dice': args.dice
                           }
             else:
                 input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end, input_sp_label = batch
@@ -140,7 +146,7 @@ def test(model, tokenizer, test_data):
             # max_prob_batch, pred_batch = torch.max(logits, dim=1)
 
             # pred_batch = torch.sigmoid(outputs)
-            pred_batch = process_logit(example_indices, outputs[1], _sent_len)
+            pred_batch = process_logit(example_indices, outputs[1], _sent_len, threshold)
             _loss = outputs[0]
             if n_gpu > 1:
                 _loss = _loss.mean()  # mean() to average on multi-gpu.
@@ -209,7 +215,8 @@ def train(model, tokenizer, dataset):
                           'sent_sum_way': args.sent_sum_way,
                           'sp_label': input_sp_label,
                           'sent_num': sent_num,
-                          'gtem': 'sent'
+                          'gtem': 'sent',
+                          'dice': args.dice
                           }
             else:
                 input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end, input_sp_label = batch
@@ -238,10 +245,8 @@ def train(model, tokenizer, dataset):
                 loss = loss.mean()  # mean() to average on multi-gpu.
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
-            try:
-                loss.backward()
-            except:
-                print(input_ids)
+            loss.backward()
+
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 optimizer.step()
                 scheduler.step()
@@ -255,7 +260,7 @@ def train(model, tokenizer, dataset):
                              + ' loss:' + str(float(aver_loss) / float(all_step)))
 
             if (all_step) % args.eval_step == 0:
-                eval_loss, res = test(model, tokenizer, dataset['dev'])
+                eval_loss, res = test(model, tokenizer, dataset['dev'], args.threshold)
                 # if res > _max:
                 if eval_loss < _min:
                     _min = eval_loss
@@ -266,31 +271,34 @@ def train(model, tokenizer, dataset):
                 else:
                     if i > 1:
                         es += 1
-                        if es >= 15:
+                        if es >= args.early_stop:
                             break
                 logging.info('now_best epoch_allstep: ' + ind + ' maxf1:' + str(_max))
                 logging.info('now_best epoch_allstep: ' + ind + ' minloss:' + str(_min))
+                logging.info('now_loss: ' + str(eval_loss))
                 logging.info('early_stop:' + str(es))
-            if (all_step) % (args.eval_step * 10) == 0:
-                save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
-                                                                                                        '_') + '_' + str(
-                    ind) + '_' + str(_min)[2:6] + '_' + str(_max)[2:6]
-                if not os.path.exists(save_path):
-                    os.makedirs(save_path)
-                    torch.save(best, save_path + '/model.pt')
+            # if (all_step) % (args.eval_step * 10) == 0:
+            #     save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
+            #                                                                                             '_') + '_' + str(
+            #         ind) + '_' + str(_min)[2:6] + '_' + str(_max)[2:6]
+            #     if not os.path.exists(save_path):
+            #         os.makedirs(save_path)
+            #         torch.save(best, save_path + '/model.pt')
 
-        eval_loss, res = test(model, tokenizer, dataset['dev'])
+        eval_loss, res = test(model, tokenizer, dataset['dev'], args.threshold)
         # if res > _max:
         if eval_loss < _min:
             _min = eval_loss
             _max = res
             best = model
             ind = str(i) + '_' + str(all_step)
+            es = 0
 
         logging.info('epoch ' + str(i))
         logging.info('now_best epoch_allstep: ' + ind + ' maxf1:' + str(_max))
         logging.info('now_best epoch_allstep: ' + ind + ' minloss:' + str(_min))
-        if (i + 1) % 3 == 0:
+        logging.info('now_loss: ' + str(eval_loss))
+        if (i + 1) % 5 == 0:
             save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
                                                                                                     '_') + '_' + str(
                 ind) + '_' + str(_min)[2:6] + '_' + str(_max)[2:6]
@@ -300,7 +308,7 @@ def train(model, tokenizer, dataset):
             # _save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
             # '_') + '_epoch' + str( i) + '_' + str(_min)[2:6] + '_' + str(_max)[2:6] if not os.path.exists(
             # _save_path): os.makedirs(_save_path) torch.save(model, _save_path + '/model.pt')
-        if es >= 15:
+        if es >= args.early_stop:
             logging.info('stop at ' + str(i) + '_' + str(all_step))
             break
     # _save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
@@ -335,14 +343,20 @@ if __name__ == "__main__":
             else:
                 T = False
             if args.full_pas:
-                dataset = {'train': processor.create_examples(args.train_data_full+'.ety', 'train', T, sent=args.sent),
-                           'dev': processor.create_examples(args.dev_data_full+'.ety', 'dev', T, sent=args.sent),
-                           'test': processor.create_examples(args.test_data_full+'.ety', 'test', T, sent=args.sent)}
+                dataset = {
+                    'train': processor.create_examples(args.train_data_full + '.ety', 'train', T, sent=args.sent),
+                    'dev': processor.create_examples(args.dev_data_full + '.ety', 'dev', T, sent=args.sent),
+                    'test': processor.create_examples(args.test_data_full + '.ety', 'test', T, sent=args.sent)}
 
             else:
-                dataset = {'train': processor.create_examples(args.train_data, 'train', T, sent=args.sent),
-                           'dev': processor.create_examples(args.dev_data, 'dev', T, sent=args.sent),
-                           'test': processor.create_examples(args.test_data, 'test', T, sent=args.sent)}
+                if args.task.find('cmrc') != -1:
+                    dataset = {'train': processor.create_examples(args.train_data_cmrc, 'train', T, sent=args.sent),
+                               'dev': processor.create_examples(args.dev_data_cmrc, 'dev', T, sent=args.sent),
+                               'test': processor.create_examples(args.test_data_cmrc, 'test', T, sent=args.sent)}
+                else:
+                    dataset = {'train': processor.create_examples(args.train_data, 'train', T, sent=args.sent),
+                               'dev': processor.create_examples(args.dev_data, 'dev', T, sent=args.sent),
+                               'test': processor.create_examples(args.test_data, 'test', T, sent=args.sent)}
             # 3. test, proceed, train
             for i in dataset:
                 logging.info(i + ' length: ' + str(len(dataset[i])))
@@ -351,11 +365,12 @@ if __name__ == "__main__":
                         features = convert_examples_to_features_sent_ques(
                             dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer,
                             is_train=True)
-                        data = get_batches_sent(features, is_train=True, full_pas=True)
+                        data = get_batches_sent(args, features, is_train=True, full_pas=True)
                     else:
                         features = convert_examples_to_features_sent(
-                            dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
-                        data = get_batches_sent(features, is_train=True)
+                            dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer,
+                            is_train=True)
+                        data = get_batches_sent(args, features, is_train=True)
                 else:
                     features = convert_examples_to_features(
                         dataset[i], [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
@@ -368,7 +383,7 @@ if __name__ == "__main__":
     if args.is_test:
         print(args.sent)
         if args.full_pas:
-            dt = processor.create_examples(args.test_data_full + 'ety', 'test', False, sent=args.sent)
+            dt = processor.create_examples(args.test_data_full + '.ety', 'test', False, sent=args.sent)
         else:
             dt = processor.create_examples(args.test_data, 'test', False, sent=args.sent)
         # features = convert_examples_to_features(
@@ -377,16 +392,22 @@ if __name__ == "__main__":
         # dataset_ = DataLoader(data, batch_size=args.test_batch_size)
         # data_to_pickle(dataset_, args.out_dir + "/features_test_3000.pkl")
         if args.sent:
-            features = convert_examples_to_features_sent(
-                dt, [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
-            data = get_batches_sent(features, is_train=True)
+            if args.full_pas:
+                features = convert_examples_to_features_sent_ques(dt, [False, True], args.max_ques_length,
+                                                                  args.max_seq_length, tokenizer, is_train=True)
+                data = get_batches_sent(args, features, is_train=True, full_pas=True)
+            else:
+
+                features = convert_examples_to_features_sent(
+                    dt, [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
+                data = get_batches_sent(args, features, is_train=True)
         else:
             features = convert_examples_to_features(
                 dt, [False, True], args.max_ques_length, args.max_seq_length, tokenizer, is_train=True)
             data = get_batches(features, is_train=True)
         model = load_torch_model(args.save, use_cuda=args.cuda)
-        # if args.sent:
-        #     model = model.module
+        if args.sent:
+            model = model.module
         if torch.cuda.is_available():
             if not args.cuda:
                 print("Waring: You have a CUDA device, so you should probably run with --cuda")
@@ -399,7 +420,7 @@ if __name__ == "__main__":
         # print(type(model))
         # model = None
         # ['test']
-        print(test(model, tokenizer, data))
+        print(test(model, tokenizer, data, args.threshold))
     else:
         ''' make sure the folder to save models exist '''
         # if not os.path.exists(args.saved):
@@ -408,6 +429,8 @@ if __name__ == "__main__":
         ''' continue training or not '''
         if args.proceed:
             model = load_torch_model(args.save, use_cuda=args.cuda)
+            if args.sent:
+                model = model.module
         else:
             # model = GraphBasedModel.from_pretrained(args.model, num_rel=1, pretrain=args.model)
             if args.model[:3] == 'dis':
@@ -428,7 +451,7 @@ if __name__ == "__main__":
                     model = torch.nn.DataParallel(model)
 
         best, ind = train(model, tokenizer, dataset)
-        min_loss, testres = test(best, tokenizer, dataset['test'])
+        min_loss, testres = test(best, tokenizer, dataset['test'], args.threshold)
         print(min_loss)
         print(testres)
         save_path = 'best/' + args.task + '_final_' + str(args.batch_size) + '_' + args.model.replace('/',

@@ -11,13 +11,18 @@ import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
 from torch.nn import functional as F
-from transformers import DistilBertPreTrainedModel, DistilBertModel
+from transformers import DistilBertPreTrainedModel, DistilBertModel, BertConfig
 
-from transformers.modeling_bert import BertPreTrainedModel, BertModel
+from transformers.modeling_bert import BertPreTrainedModel, BertModel, BertSelfAttention
 from transformers.modeling_roberta import RobertaModel
 from transformers.modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits
 from transformers.configuration_roberta import RobertaConfig
 from transformers.file_utils import add_start_docstrings
+
+from utils.global_attention import GlobalAttention
+from utils.multi_headed_attn import MultiHeadedAttention
+
+from utils.dice_loss import DiceLoss
 
 
 class gcnLayer(nn.Module):
@@ -245,7 +250,7 @@ class DisGraphBasedModel(DistilBertPreTrainedModel):
 
         return sp_loss
 
-
+dice_loss = DiceLoss()
 class GraphBasedModel(BertPreTrainedModel):
 
     def __init__(self, config, num_answer_type=3, num_hop=3, num_rel=2, no_gnn=False, edp=0.0,
@@ -279,8 +284,16 @@ class GraphBasedModel(BertPreTrainedModel):
 
         self.num_answer_type = num_answer_type
         self.sfm = nn.Softmax(-1)
+        # self.dice_loss = DiceLoss()
         # self.answer_type_classifier.half()
 
+        # self.bert_self_attention = BertSelfAttention(BertConfig.from_pretrained('hfl/rbt3'))
+
+        self.self_attention = GlobalAttention(dim=config.hidden_size, attn_type='mlp')
+        #
+        # self.self_attention = MultiHeadedAttention(head_count=1, model_dim=config.hidden_size,
+        #                                            dropout=config.attention_probs_dropout_prob)
+        # self.fairseq_attn = MultiheadAttention(config.hidden_size, 1, self_attention=True)
         self.init_weights()
 
     def attention(self, x, z):
@@ -307,7 +320,7 @@ class GraphBasedModel(BertPreTrainedModel):
         # input: max_len X batch_size X dim
 
         input_mask = self.gen_mask(input.size(0), input_len, input.device)
-
+        # print(input_mask)
         att = selfatt.forward(input).squeeze(-1).transpose(0, 1)
         att = att.masked_fill(input_mask, -9e15)
         if span_logits is not None:
@@ -322,7 +335,8 @@ class GraphBasedModel(BertPreTrainedModel):
         return output
 
     def forward(self, input_ids, input_mask, segment_ids, adj_matrix, graph_mask, sent_start,
-                sent_end, sent_num=None, sp_label=None, sent_sum_way='attn', gtem='ori'):
+                sent_end, sent_num=None, sp_label=None, sent_sum_way='attn', gtem='ori',
+                dice=False):
 
         """
         input_ids: bs X num_doc X num_sent X sent_len
@@ -389,12 +403,13 @@ class GraphBasedModel(BertPreTrainedModel):
         else:
             bs, sl, sent_len = input_ids.size()
             max_nodes = adj_matrix.size(-1)
+            sent_sum_output_ = torch.zeros(bs, max_nodes, self.ori_hidden).to(input_ids.device)
             sent_sum_output = torch.zeros(bs, max_nodes, self.ori_hidden).to(input_ids.device)
             for i in range(bs):
                 # print(sent_num[i])
                 ll = int(sent_num[i])
-                sent_sum_output[i, :ll, :] = self.bert(input_ids[i, :ll], token_type_ids=segment_ids[i, :ll],
-                                                       attention_mask=input_mask[i, :ll])[1].squeeze(0)
+                sent_sum_output_[i, :ll, :] = self.bert(input_ids[i, :ll], token_type_ids=segment_ids[i, :ll],
+                                                        attention_mask=input_mask[i, :ll])[1].squeeze(0)
                 # temp = ll
                 # while temp > 50:
                 #     sent_sum_output[i, ll - temp:ll - temp + 50, :] = self.bert(input_ids[i, ll - temp:ll - temp + 50],
@@ -406,7 +421,26 @@ class GraphBasedModel(BertPreTrainedModel):
                 #     temp -= 50
                 # sent_sum_output[i, ll - temp:ll, :] = self.bert(input_ids[i, :ll], token_type_ids=segment_ids[i, :ll],
                 #                                                 attention_mask=input_mask[i, :ll])[1].squeeze(0)
+            if sent_sum_way == 'attn':
+                # logging.info('----')
+                # logging.info(sent_sum_output_)
+                mask = torch.ones(bs, max_nodes, max_nodes).to(input_ids.device)
 
+                for i in range(bs):
+                    s_l = len([item for item in graph_mask[i] if item != 0])
+                    # print(s_l)
+                    for x in range(s_l):
+                        for y in range(s_l):
+                            mask[i, x, y] = 0
+                sent_sum_output_ = self.self_attention(sent_sum_output_, sent_sum_output_, sent_num)[
+                    0].transpose(0, 1)
+                # logging.info(sent_sum_output_)
+                for i in range(bs):
+                    ll = int(sent_num[i])
+                    sent_sum_output[i, :ll, :] = sent_sum_output_[i, :ll, :]
+                # logging.info(sent_sum_output)
+            else:
+                sent_sum_output = sent_sum_output_
         # graph reasoning
         if not self.no_gnn and self.num_rel > 0:
             gcn_output = self.sp_graph(sent_sum_output, graph_mask, adj_matrix)  # bs X max_nodes X feat_dim
@@ -424,7 +458,10 @@ class GraphBasedModel(BertPreTrainedModel):
         # answer type logits
 
         if sp_label is not None:
-            return self.loss_func(sp_logits, sp_label), sp_logits
+            if dice:
+                return dice_loss(sp_logits, sp_label), sp_logits
+            else:
+                return self.loss_func(sp_logits, sp_label), sp_logits
         else:
             return sp_logits
 

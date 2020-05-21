@@ -86,3 +86,20 @@ import sys, os
 #     print(cont)
 
 print(zip)
+
+import nlp
+
+# Print all the available datasets
+for dataset in nlp.list_datasets():
+    print(dataset.id)
+
+# Load a dataset and print the first examples in the training set
+# squad_dataset = nlp.load_dataset('squad')
+# print(squad_dataset['train'][0])
+print('===========================')
+# List all the available metrics
+for metric in nlp.list_metrics():
+    print(metric.id)
+
+# # Load a metric
+# squad_metric = nlp.load_metric('squad')

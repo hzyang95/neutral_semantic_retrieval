@@ -529,7 +529,7 @@ def get_batches(features, is_train=False):
     return data
 
 
-def get_batches_sent(features, is_train=False, full_pas=False):
+def get_batches_sent(args, features, is_train=False, full_pas=False):
     start = time.time()
 
     def get_batch_stat(features):
@@ -570,7 +570,7 @@ def get_batches_sent(features, is_train=False, full_pas=False):
     sent_end = -1 * torch.ones(minibatch_size, max_nodes, dtype=torch.long)
 
     adj_matrix = gen_adj_matrix(features, max_nodes,
-                                wdedge=True, quesedge=full_pas, adedge=full_pas)
+                                wdedge=args.wdedge, quesedge=args.quesedge, adedge=args.adedge)
 
     # nodes configuration: [cands, docs, mentions, subs]
     # for di, d in enumerate(features):

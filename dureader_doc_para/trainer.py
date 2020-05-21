@@ -11,8 +11,8 @@ import torch.nn as nn
 import torch.nn.utils.rnn as rnn_utils
 import torch.utils.data.dataloader as DataLoader
 from allennlp.nn.util import move_to_device
-from neu_sem_retrieval.model import Classifier
-from neu_sem_retrieval.utils import parse_config, mkdata, subDataset, getData,getTestData,mktestdata
+from dureader_doc_para.model import Classifier
+from dureader_doc_para.utils import parse_config, mkdata, subDataset, getData,getTestData,mktestdata
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))
 from transformers import BertTokenizer, BertModel, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup,DistilBertForSequenceClassification

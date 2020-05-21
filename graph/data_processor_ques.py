@@ -31,6 +31,7 @@ class DataProcessorFull(object):
         #     print('get!'+path)
         #     return pickle_to_data(path+'.pkl')
         examples = []
+        la = {0: 0, 1: 0}
         print(sent)
         with open(path, 'r', encoding='utf-8') as f:
             file = f.readlines()
@@ -116,6 +117,7 @@ class DataProcessorFull(object):
                     ll += lll
                     content.append({'text': item['text'], 'ans_np_ety': ans_np_ety, 'doc_id': doc_id})
                     label.append(item['label'])
+                    la[item['label']] += 1
             # print(len(content))
             if len(label) == 0:
                 continue
@@ -159,7 +161,7 @@ class DataProcessorFull(object):
             examples.append(
                 InputExample(guid=guid, question=question, ques_np_ety=ques_np_ety, answer=content, label=label))
         print(_aver)
-        print(ex)
+        # print(ex)
         print(all_num)
         # print(len(neg))
         # # print('\n'.join(neg[:10]))
@@ -168,6 +170,7 @@ class DataProcessorFull(object):
         # # print(nnnn)
         # # print(lb0)
         print(len(examples))
+        print(la)
         logging.info(str(set_type) + str(len(examples)))
         # data_to_pickle(examples, path + ".pkl")
         return examples
@@ -185,7 +188,7 @@ if __name__ == "__main__":
     dt = DataProcessorFull()
     tokenizer = BertTokenizer.from_pretrained('hfl/rbt3')
     for i in dataset:
-        fe = dt.create_examples('../data/' + i+'.ety', 'test', False, True, sent=True)
+        fe = dt.create_examples('../data/' + i + '.ety', 'test', False, True, sent=True)
         # data_to_pickle(fe, "data/" + i[:-5] + ".pkl")
         # convert_examples_to_features_sent_ques(fe, [False, True], 50, 200, tokenizer, is_train=True)
         # dt.create_examples('../../../data/cips-sougou/nottruth/' + i, 'test', False,True,sent=False)

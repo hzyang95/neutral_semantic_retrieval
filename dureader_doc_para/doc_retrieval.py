@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from tqdm import tqdm
 
-from neu_sem_retrieval.utils import parse_config, mkdata, subDataset, getData, getTestData, mktestdata
+from dureader_doc_para.utils import parse_config, mkdata, subDataset, getData, getTestData, mktestdata
 
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(CUR_PATH, '../')))

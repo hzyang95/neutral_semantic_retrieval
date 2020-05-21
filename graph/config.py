@@ -6,31 +6,60 @@ import argparse
 def set_args():
     parser = argparse.ArgumentParser(description="PyTorch")
     ''' load data and save model'''
-    parser.add_argument("--device", type=str, default='2,3,4,5,6,7',
+
+    parser.add_argument("--task", type=str, default='sentmixaversplit',
+                        help="use which part of data for training and test")
+
+
+    parser.add_argument("--device", type=str, default='3',
                         help="use GPU")
 
-    parser.add_argument("--testbatch", action='store_true', #default=True,
+    parser.add_argument("--testbatch", action='store_true', default=True,
                         help="testbatch mode")
 
-    parser.add_argument("--sent", action='store_true',#default=True,
+    parser.add_argument("--sent", action='store_true',default=True,
                         help="sent mode")
 
     parser.add_argument("--full_pas", action='store_true', #default=True,
                         help="sent mode")
 
+    parser.add_argument("--wdedge", action='store_true',  default=True,
+                        help="wdedge")
+    parser.add_argument("--quesedge", action='store_true',  # default=True,
+                        help="quesedge")
+    parser.add_argument("--adedge", action='store_true',  # default=True,
+                        help="adedge")
+
     parser.add_argument("--is_test", action="store_true", #default=True,
                         help="flag for training model or only test")
-    parser.add_argument('--raw', action='store_true',  #default=True,
+
+    parser.add_argument("--threshold", type=float, default=0.5,
+                        help="select threshold")
+
+    parser.add_argument('--raw', action='store_true',  default=True,
                         help='是否先做tokenize')
+
+    parser.add_argument('--dice', action='store_true', #default=True,
+                        help='dice_loss')
     # parser.add_argument("--train_data", type=str, default='../data/valid.441.2.5.json',
     #                     help="location of dataset")
     # parser.add_argument("--dev_data", type=str, default='../data/valid.441.2.5.json',
     #                     help="location of dataset")
+
+
     parser.add_argument("--train_data", type=str, default='../data/data_for_graph_train.v1.30000.143127.2.8.41.json',
                         help="location of dataset")
     parser.add_argument("--dev_data", type=str, default='../data/data_for_graph_valid.2000.10115.3.7.41.json',
                         help="location of dataset")
     parser.add_argument("--test_data", type=str, default='../data/data_for_graph_test.3000.13848.3.9.40.json',
+                        help="location of dataset")
+
+    parser.add_argument("--train_data_cmrc", type=str, default='../data/cmrc2018__train.10142.6.17.41.json',
+                        help="location of dataset")
+    # cmrc2018__train.10142.1.12.41
+    parser.add_argument("--dev_data_cmrc", type=str, default='../data/cmrc2018__dev.1548.1.12.40.json',
+                        help="location of dataset")
+    parser.add_argument("--test_data_cmrc", type=str, default='../data/cmrc2018__test.1671.1.13.38.json',
                         help="location of dataset")
 
     parser.add_argument("--train_data_full", type=str, default='../data/ques_data_for_graph_train.v1.30000.27127.2.8.41.json',
@@ -47,7 +76,7 @@ def set_args():
     # ques_data_for_graph_valid.2000.10115.1809.3.7.41.json
     # ques_data_for_graph_test.3000.13848.2621.3.9.40.json
     parser.add_argument('--sent_sum_way',
-                        type=str, default="avg",
+                        type=str, default="aver",
                         help="how to get sentence embedding from bert output")
 
     # distilbert-base-multilingual-cased
@@ -89,15 +118,19 @@ def set_args():
 
     parser.add_argument("--epochs", type=int, default=25,
                         help="number of training epoch")
+
+    parser.add_argument("--early_stop", type=int, default=15,
+                        help="number of training epoch")
+
     parser.add_argument("--batch_size", type=int, default=6,
                         help="batch size")
 
     parser.add_argument("--test_batch_size", type=int, default=4,
                         help="batch size")
 
-    parser.add_argument("--eval_step", type=int, default=1250,
+    parser.add_argument("--eval_step", type=int, default=50,
                         help="eval_step")
-    parser.add_argument("--log_step", type=int, default=50,
+    parser.add_argument("--log_step", type=int, default=10,
                         help="log_step")
 
     parser.add_argument("--dropout", type=float, default=0.1,
@@ -116,9 +149,6 @@ def set_args():
 
     parser.add_argument("--out_dir", type=str, default="data/",
                         help="directory for output pickles")
-
-    parser.add_argument("--task", type=str, default='sentmixaversplit',
-                        help="use which part of data for training and test")
 
     parser.add_argument("--proceed", action="store_true",
                         help="flag for continue training on current model")

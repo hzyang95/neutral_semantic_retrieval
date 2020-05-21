@@ -26,7 +26,7 @@ class DataProcessor(object):
         with open(path, 'r', encoding='utf-8') as f:
             file = f.readlines()
         if test:
-            file = file[:800]
+            file = file[:200]
         print(len(file))
         _aver = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         nnnn = 0

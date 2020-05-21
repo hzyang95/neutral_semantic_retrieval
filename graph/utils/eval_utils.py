@@ -166,7 +166,7 @@ def log_prf_single(y_pred, y_true):
     return macro_f1
 
 
-def process_logit(batch_index, batch_logits,_sent_len):
+def process_logit(batch_index, batch_logits,_sent_len, threshold):
     """get predictions for each sample in the batch
 
     Arguments:
@@ -186,7 +186,7 @@ def process_logit(batch_index, batch_logits,_sent_len):
         # print(sp_logits_np)
         # supporting facts prediction
         # pred_sp_idx = [x[0] for x in enumerate(sp_logits_np[idx, :].tolist()) if x[1] > 0]
-        pred_sp_idx = [x[0] for x in enumerate(sp_logits_np[idx, :].tolist()) if x[1] > 0.4]
+        pred_sp_idx = [x[0] for x in enumerate(sp_logits_np[idx, :].tolist()) if x[1] > threshold]
         # print(len(pred_sp_idx))
         # print(_sent_len[idx])
 
