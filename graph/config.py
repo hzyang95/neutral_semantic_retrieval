@@ -14,7 +14,7 @@ def set_args():
     parser.add_argument("--device", type=str, default='3',
                         help="use GPU")
 
-    parser.add_argument("--testbatch", action='store_true', default=True,
+    parser.add_argument("--testbatch", action='store_true', default=False,
                         help="testbatch mode")
 
     parser.add_argument("--sent", action='store_true',default=True,
@@ -54,9 +54,11 @@ def set_args():
     parser.add_argument("--test_data", type=str, default='../data/data_for_graph_test.3000.13848.3.9.40.json',
                         help="location of dataset")
 
-    parser.add_argument("--train_data_cmrc", type=str, default='../data/cmrc2018__train.10142.6.17.41.json',
+    parser.add_argument("--train_data_cmrc", type=str, default='../data/cmrc2018__train.10142.10.21.41.json',
                         help="location of dataset")
     # cmrc2018__train.10142.1.12.41
+    # cmrc2018__train.10142.1.2.41.json
+    # cmrc2018__train.10142.10.21.41.json
     parser.add_argument("--dev_data_cmrc", type=str, default='../data/cmrc2018__dev.1548.1.12.40.json',
                         help="location of dataset")
     parser.add_argument("--test_data_cmrc", type=str, default='../data/cmrc2018__test.1671.1.13.38.json',

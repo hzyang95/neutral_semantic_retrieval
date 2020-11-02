@@ -113,3 +113,13 @@ data/
 models/
 
 .idea/
+
+checkpoints/
+log/
+best/
+figures/
+predictions/
+tb/
+*.json
+ltp_data_v3.4.0/
+pretrained/*

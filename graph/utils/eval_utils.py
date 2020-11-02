@@ -186,10 +186,12 @@ def process_logit(batch_index, batch_logits,_sent_len, threshold):
         # print(sp_logits_np)
         # supporting facts prediction
         # pred_sp_idx = [x[0] for x in enumerate(sp_logits_np[idx, :].tolist()) if x[1] > 0]
-        pred_sp_idx = [x[0] for x in enumerate(sp_logits_np[idx, :].tolist()) if x[1] > threshold]
+        for x in enumerate(sp_logits_np[idx, :].tolist()):
+            pred_sp_idx = [x[0]]
         # print(len(pred_sp_idx))
+        # print(_sent_len)
         # print(_sent_len[idx])
-
+ 
         top = 4
         tops = torch.topk(torch.tensor(sp_logits_np[idx, :]), min(top, _sent_len[idx]), dim=0)
         # print(tops)
@@ -197,10 +199,10 @@ def process_logit(batch_index, batch_logits,_sent_len, threshold):
         #     sp_pred+=get_sp_pred(pred_sp_idx, predict_examples[idx])
 
         ind = [0] * _sent_len[idx]
-        # for ii in tops[1]:
-        #     ind[ii] = 1
-        for ii in pred_sp_idx:
+        for ii in tops[1]:
             ind[ii] = 1
+        # for ii in pred_sp_idx:
+        #     ind[ii] = 1
         # sp_pred += pred_sp_idx
         sp_pred += ind
 

@@ -1,5 +1,7 @@
 import json
 
+from tqdm import tqdm
+
 
 class InputExample(object):
 
@@ -51,22 +53,31 @@ class DataProcessor(object):
         examples = []
         with open(path, 'r', encoding='utf-8') as f:
             file = f.readlines()
-        for i, line in enumerate(file[:top]):
+        for i, line in tqdm(enumerate(file[:])):
             row = json.loads(line)
             guid = "%s-%s" % (set_type, i)
-            text_a = row['question']
-            # answer = '{} {}'.format(row['context'], row['title'])
-            text_b = '{}'.format(row['text'])
-            label = row['label']
-            examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+            if "cmrc" in path:
+                for it in row['sample']:
+                    text_a = it['question']
+                    # answer = '{} {}'.format(row['context'], row['title'])
+                    text_b = '{}'.format(it['text'])
+                    label = it['label']
+                    examples.append(
+                        InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+            else:
+                text_a = row['question']
+                # answer = '{} {}'.format(row['context'], row['title'])
+                text_b = '{}'.format(row['text'])
+                label = row['label']
+                examples.append(
+                    InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 
     def _create_examples_dev(self, path, set_type, top):
         examples = []
         with open(path, 'r', encoding='utf-8') as f:
             file = f.readlines()
-        for i, line in enumerate(file[:top]):
+        for i, line in enumerate(file[:]):
             row = json.loads(line)
             samples = []
             for item in row['sample']:
@@ -200,7 +211,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
     label_map = {label: i for i, label in enumerate(label_list)}
     features = []
 
-    for (ex_index, example) in enumerate(examples):
+    for (ex_index, example) in enumerate(tqdm(examples)):
         tokens_a = tokenizer.tokenize(example.text_a)
         tokens_b = tokenizer.tokenize(example.text_b)
         _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)

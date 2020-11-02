@@ -9,7 +9,7 @@ from tqdm import tqdm, trange
 from config import set_args
 
 from data_processor import DataProcessor, convert_examples_to_features, convert_examples_to_features_test
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 import numpy as np
 import torch
@@ -20,13 +20,13 @@ from transformers import BertForSequenceClassification, DistilBertForSequenceCla
 
 from pytorch_pretrained_bert.optimization import BertAdam
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "7,6"
 
 # 0 ： mul
 # 1 : dis
 # 2 : chi
 
-dis = 1
+dis = 2
 tops = 1
 args = set_args()
 if dis == 1:
@@ -34,17 +34,22 @@ if dis == 1:
     # args.eval_batch_size = 50
     args.bert_model = 'distilbert-base-multilingual-cased'
 if dis == 2:
-    args.bert_model = 'bert-base-chinese'
+    # args.bert_model = 'bert-base-chinese'
+    args.bert_model = 'hfl/rbt3'
 
 if args.gra == 'sent':
-    args.train_data = '../data/sent_train.v1.35000.1205950.0.1.41.json'
-    args.dev_data = '../data/sent_valid.10000.23421.3.8.41.json'
-    args.max_seq_length = 50
+    # args.train_data = '../data/sent_train.v1.35000.1205950.0.1.41.json'
+    # args.dev_data = '../data/sent_valid.10000.23421.3.8.41.json'
+    args.train_data = '../data/cmrc2018__train.10142.10.21.41.json'
+    args.dev_data = '../data/cmrc2018__dev.1548.1.12.40.json'
+    args.max_seq_length = 150
     args.train_batch_size *= 5
     args.eval_batch_size *= 5
-    args.train_num *= 5
-    args.dev_num *= 5
-    tops = 3
+    # args.train_num *= 5
+    # args.dev_num *= 5
+    args.train_num = 10142
+    args.dev_num = 1548
+    tops = 2
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
@@ -53,7 +58,7 @@ formatter_file = logging.Formatter('%(asctime)s - %(filename)s '
                                    '- %(funcName)s- %(lineno)d- '
                                    '-%(levelname)s - %(message)s')
 logger = logging.getLogger()
-file = logging.FileHandler(str(dis) + '_' + str(args.gra) + '_' + str(args.train_num) + '_' + str(args.dev_num) +
+file = logging.FileHandler(str(dis) + '_up_' + str(args.gra) + '_' + str(args.train_num) + '_' + str(args.dev_num) +
                            '_' + str(args.train_batch_size) + '_' + str(args.eval_batch_size) + '_' +
                            str(torch.cuda.device_count()) + '_gpu'+os.environ["CUDA_VISIBLE_DEVICES"]+'para_new', encoding='utf-8')
 file.setLevel(level=logging.INFO)
@@ -261,9 +266,9 @@ if __name__ == "__main__":
     if dis == 1:
         eval_step = 250
     else:
-        eval_step = 500
+        eval_step = 50
 
-    writer = SummaryWriter(log_dir="figures")
+    # writer = SummaryWriter(log_dir="figures")
 
     # Set GPU Issue
     n_gpu = torch.cuda.device_count()
@@ -389,7 +394,7 @@ if __name__ == "__main__":
                         logger.info("***** train results *****")
                         for key in sorted(result.keys()):
                             logger.info("  %s = %s", key, str(result[key]))
-                        output_prediction_file = os.path.join(args.output_dir, "smallbs_{}_{}_{}_{}_{}_top{}_epoch{}_step{}_pred.csv".
+                        output_prediction_file = os.path.join(args.output_dir, "smallbs_up_{}_{}_{}_{}_{}_top{}_epoch{}_step{}_pred.csv".
                                                               format(int(dis), args.gra, args.train_num, args.dev_num,
                                                                      args.name, str(tops), epc, global_step))
                         # eval_loss = evaluate(do_pred=True, pred_path=output_prediction_file)
@@ -397,9 +402,9 @@ if __name__ == "__main__":
                         model.train()
                         if max_f1 < f1:
                             max_f1 = f1
-                            add_figure(args.name, writer, global_step, tr_loss / nb_tr_steps, eval_loss, pre, rec, f1)
+                            # add_figure(args.name, writer, global_step, tr_loss / nb_tr_steps, eval_loss, pre, rec, f1)
                             output_model_file = os.path.join(args.ckpt_dir,
-                                                             "smallbs_{}_{}_{}_{}_{}_top{}_epoch{}_step{}_f1{}_loss{}.bin".format(
+                                                             "smallbs_up_{}_{}_{}_{}_{}_top{}_epoch{}_step{}_f1{}_loss{}.bin".format(
                                                                  int(dis), args.gra, args.train_num, args.dev_num,
                                                                  args.name, str(tops),
                                                                  epc, global_step, f1, eval_loss))

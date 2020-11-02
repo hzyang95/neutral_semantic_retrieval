@@ -10,7 +10,8 @@ from tqdm import tqdm
 class InputFeatures(object):
 
     def __init__(self, input_ids, input_mask, segment_ids, sp_label, sent_start, sent_end, wd_edges, graph_mask,
-                 sent_num, ques_edges=None, ad_edges=None):
+                 sent_num, ques_edges=None, ad_edges=None, guid=None):
+        self.guid = guid
         self.input_ids = input_ids
         self.input_mask = input_mask
         self.segment_ids = segment_ids
@@ -138,16 +139,6 @@ def convert_examples_to_features(examples, label_list, max_query_length, max_seq
 
         wd_edges = wd_edge_list(sent_start)
 
-        # if ex_index < 10:
-        #     logger.info("*** Example ***")
-        #     logger.info("guid: %s" % (example.guid))
-        #     logger.info("tokens: %s" % " ".join(
-        #         [str(x) for x in tokens]))
-        #     logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        #     logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-        #     logger.info(
-        #         "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-        #     logger.info("label: %s" % " ".join([str(x) for x in sp_label]))
         features.append(
             InputFeatures(input_ids=input_ids,
                           input_mask=input_mask,
@@ -157,7 +148,9 @@ def convert_examples_to_features(examples, label_list, max_query_length, max_seq
                           sent_end=sent_end,
                           wd_edges=wd_edges,
                           graph_mask=graph_mask,
-                          sent_num=sent_num
+                          sent_num=sent_num,
+                          guid=example.guid,
+                          sents = example.answer
                           ))
     return features
 
@@ -284,7 +277,101 @@ def convert_examples_to_features_sent(examples, label_list, max_query_length, ma
                           sent_end=sent_end,
                           wd_edges=wd_edges,
                           graph_mask=graph_mask,
-                          sent_num=sent_num
+                          sent_num=sent_num,
+                          guid=example.guid,
+                          sents = example.answer
+                          ))
+    return features
+
+def convert_examples_to_features_bio(examples, label_list, max_query_length, max_seq_length, tokenizer, is_train=True):
+    """Loads a data file into a list of `InputBatch`s."""
+
+    features = []
+
+    for (ex_index, example) in enumerate(tqdm(examples)):
+
+        graph_mask = []
+        sent_start = []
+        sent_end = []
+        sp_label = None
+        if is_train:
+            sp_label = []
+
+        query_tokens = tokenizer.tokenize(example.question)
+        if len(query_tokens) > max_query_length:
+            query_tokens = query_tokens[0:max_query_length]
+
+        input_ids = []
+        input_mask = []
+        segment_ids = []
+        cur_pos = 0
+        for si, sent in enumerate(example.answer):
+            sent_start.append(cur_pos)
+            cur_tokens = tokenizer.tokenize(sent)
+            _truncate_seq_pair(query_tokens, cur_tokens, max_seq_length - 3)
+            tokens = ["[CLS]"] + query_tokens + ["[SEP]"] + cur_tokens + ["[SEP]"]
+            sent_segment_ids = [0] * (len(query_tokens) + 2) + [1] * (len(cur_tokens) + 1)
+            sent_input_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+            # Mask and Paddings
+            sent_input_mask = [1] * len(sent_input_ids)
+            sent_padding = [0] * (max_seq_length - len(sent_input_ids))
+
+            sent_input_ids += sent_padding
+            sent_input_mask += sent_padding
+            sent_segment_ids += sent_padding
+
+            assert len(sent_input_ids) == max_seq_length
+            assert len(sent_input_mask) == max_seq_length
+            assert len(sent_segment_ids) == max_seq_length
+
+            graph_mask.append(1)
+            if is_train:
+                sp_label.append(int(example.label[si]))
+            input_ids.append(sent_input_ids)
+            input_mask.append(sent_input_mask)
+            segment_ids.append(sent_segment_ids)
+        assert len(input_ids) == len(input_mask)
+        assert len(input_mask) == len(segment_ids)
+        sent_num = len(input_ids)
+
+        # print(sent_tokens)
+        # print(sent_start)
+        # print(sent_end)
+        # print(graph_mask)
+        # print(sp_label)
+
+        def wd_edge_list(data):
+            """with-document edge list
+
+            Arguments:
+                data {[type]} -- [description]
+
+            Returns:
+                [type] -- [description]
+            """
+            wd_edge_list = []
+            for s1i, s1 in enumerate(data):  # even for doc title, odd for doc sents
+                for s2i, s2 in enumerate(data):
+                    if s1i != s2i:
+                        # if abs(s1i - s2i) <= 3:
+                        wd_edge_list.append([s1i, s2i])
+            return wd_edge_list
+
+        wd_edges = wd_edge_list(input_ids)
+
+        features.append(
+            InputFeatures(input_ids=input_ids,
+                          input_mask=input_mask,
+                          segment_ids=segment_ids,
+                          sp_label=sp_label,
+                          sent_start=sent_start,
+                          sent_end=sent_end,
+                          wd_edges=wd_edges,
+                          graph_mask=graph_mask,
+                          sent_num=sent_num,
+                          guid=example.guid,
+                        #   sents = example.answer
                           ))
     return features
 
@@ -450,7 +537,9 @@ def convert_examples_to_features_sent_ques(examples, label_list, max_query_lengt
                           graph_mask=graph_mask,
                           sent_num=sent_num,
                           ques_edges=ques_edges,
-                          ad_edges=ad_edges
+                          ad_edges=ad_edges,
+                          guid=example.guid,
+                          sents = example.answer
                           ))
     return features
 
@@ -599,6 +688,61 @@ def get_batches_sent(args, features, is_train=False, full_pas=False):
     #     data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
     # else:
     #     data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids)
+
+    return data
+
+def get_batches_bio(args, features, is_train=False, full_pas=False):
+    start = time.time()
+
+    def get_batch_stat(features):
+        max_sent_num = 0
+        for d in features:
+            if d.sent_num > max_sent_num:
+                max_sent_num = d.sent_num
+
+        return max_sent_num
+
+    max_nodes = get_batch_stat(features)
+    print(max_nodes)
+    # batching
+    minibatch_size = len(features)
+    input_len = len(features[0].input_ids)
+    max_sent_len = len(features[0].input_ids[0])
+    input_ids = torch.zeros(minibatch_size, max_nodes, max_sent_len, dtype=torch.long)
+    input_mask = torch.zeros(minibatch_size, max_nodes, max_sent_len, dtype=torch.long)
+    segment_ids = torch.zeros(minibatch_size, max_nodes, max_sent_len, dtype=torch.long)
+    input_graph_mask = torch.zeros(minibatch_size, max_nodes)
+    sent_num = torch.zeros(minibatch_size)
+    for fi, f in enumerate(features):
+        # print(f.sent_num)
+        # print(len(f.input_ids))
+        input_ids[fi, :f.sent_num] = torch.tensor(f.input_ids, dtype=torch.long)
+        input_mask[fi, :f.sent_num] = torch.tensor(f.input_mask, dtype=torch.long)
+        segment_ids[fi, :f.sent_num] = torch.tensor(f.segment_ids, dtype=torch.long)
+        # input_graph_mask[fi] = torch.tensor(f.graph_mask, dtype=torch.long)
+        sent_num[fi] = torch.tensor(f.sent_num, dtype=torch.long)
+    if is_train:
+        input_sp_label = torch.zeros(minibatch_size, max_nodes)
+    for di, d in enumerate(features):
+        for si in range(d.sent_num):
+            input_graph_mask[di, si] = 1  # sent_mask
+            if is_train:
+                input_sp_label[di, si] = d.sp_label[si]
+    sent_start = -1 * torch.ones(minibatch_size, max_nodes, dtype=torch.long)
+    sent_end = -1 * torch.ones(minibatch_size, max_nodes, dtype=torch.long)
+
+    adj_matrix = gen_adj_matrix(features, max_nodes,
+                                wdedge=args.wdedge, quesedge=args.quesedge, adedge=args.adedge)
+
+    guid = torch.tensor([i.guid for i in features])
+
+    if is_train:
+        data = TensorDataset(guid, input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end,
+                             input_sp_label, sent_num)
+    else:
+        data = TensorDataset(guid, input_ids, input_mask, segment_ids, adj_matrix, input_graph_mask, sent_start, sent_end,
+                             sent_num)
+
 
     return data
 

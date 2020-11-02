@@ -8,11 +8,11 @@ from torch import optim, nn
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from tqdm import tqdm
 
-from transformers import BertTokenizer, DistilBertTokenizer, AdamW, BertConfig, get_linear_schedule_with_warmup
+from transformers import BertTokenizer, DistilBertTokenizer, AdamW, BertConfig, get_linear_schedule_with_warmup, RobertaTokenizer
 from transformers import BertForSequenceClassification, DistilBertForSequenceClassification
 
 from data_processor_ques import DataProcessorFull
-from graph_model import GraphBasedModel, DisGraphBasedModel
+from graph_model import GraphBasedModel, DisGraphBasedModel, RobertaGraphBasedModel
 from config import set_args
 from utils.eval_utils import log_prf_single, process_logit
 
@@ -34,7 +34,7 @@ else:
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-6s %(levelname)-6s %(message)s',
                     datefmt='%m-%d %H:%M',
-                    filename='mt_' + t + '_' + title + '.log',  # ' + t + '
+                    filename='log/mt_' + t + '_' + title + '.log',  # ' + t + '
                     filemode='w')
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
@@ -298,7 +298,7 @@ def train(model, tokenizer, dataset):
         logging.info('now_best epoch_allstep: ' + ind + ' maxf1:' + str(_max))
         logging.info('now_best epoch_allstep: ' + ind + ' minloss:' + str(_min))
         logging.info('now_loss: ' + str(eval_loss))
-        if (i + 1) % 5 == 0:
+        if (i + 1) % 3 == 0:
             save_path = 'best/' + args.task + '_' + str(args.batch_size) + '_' + args.model.replace('/',
                                                                                                     '_') + '_' + str(
                 ind) + '_' + str(_min)[2:6] + '_' + str(_max)[2:6]
@@ -328,8 +328,11 @@ if __name__ == "__main__":
         args.max_seq_length = 150
     if args.model[:3] == 'dis':
         tokenizer = DistilBertTokenizer.from_pretrained(args.model)
+    elif 'roberta' in args.model:
+        tokenizer = RobertaTokenizer.from_pretrained(args.model)
     else:
         tokenizer = BertTokenizer.from_pretrained(args.model)
+
     if args.full_pas:
         processor = DataProcessorFull()
     else:
@@ -346,17 +349,19 @@ if __name__ == "__main__":
                 dataset = {
                     'train': processor.create_examples(args.train_data_full + '.ety', 'train', T, sent=args.sent),
                     'dev': processor.create_examples(args.dev_data_full + '.ety', 'dev', T, sent=args.sent),
-                    'test': processor.create_examples(args.test_data_full + '.ety', 'test', T, sent=args.sent)}
-
+                    # 'test': processor.create_examples(args.test_data_full + '.ety', 'test', T, sent=args.sent)
+                    }
             else:
                 if args.task.find('cmrc') != -1:
                     dataset = {'train': processor.create_examples(args.train_data_cmrc, 'train', T, sent=args.sent),
                                'dev': processor.create_examples(args.dev_data_cmrc, 'dev', T, sent=args.sent),
-                               'test': processor.create_examples(args.test_data_cmrc, 'test', T, sent=args.sent)}
+                            #    'test': processor.create_examples(args.test_data_cmrc, 'test', T, sent=args.sent)
+                               }
                 else:
                     dataset = {'train': processor.create_examples(args.train_data, 'train', T, sent=args.sent),
                                'dev': processor.create_examples(args.dev_data, 'dev', T, sent=args.sent),
-                               'test': processor.create_examples(args.test_data, 'test', T, sent=args.sent)}
+                            #    'test': processor.create_examples(args.test_data, 'test', T, sent=args.sent)
+                               }
             # 3. test, proceed, train
             for i in dataset:
                 logging.info(i + ' length: ' + str(len(dataset[i])))
@@ -436,6 +441,8 @@ if __name__ == "__main__":
             if args.model[:3] == 'dis':
                 # tokenizer = DistilBertTokenizer.from_pretrained(args.model)
                 model = DisGraphBasedModel.from_pretrained(args.model, num_rel=1)
+            elif 'roberta' in args.model:
+                model = RobertaGraphBasedModel.from_pretrained(args.model, num_rel=1)
             else:
                 model = GraphBasedModel.from_pretrained(args.model, num_rel=1)
                 # print(os.path.exists('C:/Users/Yang/Desktop/hfl_rbt3/'))
@@ -451,12 +458,16 @@ if __name__ == "__main__":
                     model = torch.nn.DataParallel(model)
 
         best, ind = train(model, tokenizer, dataset)
-        min_loss, testres = test(best, tokenizer, dataset['test'], args.threshold)
-        print(min_loss)
-        print(testres)
+        # min_loss, testres = test(best, tokenizer, dataset['test'], args.threshold)
+        # print(min_loss)
+        # print(testres)
+        '''
         save_path = 'best/' + args.task + '_final_' + str(args.batch_size) + '_' + args.model.replace('/',
                                                                                                       '_') + '_' + ind + '_' + str(
             min_loss)[2:6] + '_' + str(testres)[2:6]
+        '''
+        save_path = 'best/' + args.task + '_final_' + str(args.batch_size) + '_' + args.model.replace('/','_') + '_' + ind
+
         if not os.path.exists(save_path):
             os.makedirs(save_path)
             torch.save(best, save_path + '/model.pt')

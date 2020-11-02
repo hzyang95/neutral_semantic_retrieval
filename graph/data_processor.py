@@ -34,20 +34,21 @@ class DataProcessor(object):
         neg_long = []
         all_num=0
         # lb0 = 0
+        guid=0
         for i, line in enumerate(tqdm(file[:])):
             row = json.loads(line)
-            guid = "%s-%s" % (set_type, i)
             question = row['question']
             content = []
             label = []
             ll = 0
+            guid+=1
             # if row['top'] == 0:
             #     lb0 += 1
             for item in row['sample']:
                 lll = len(item['text'])
                 # print(ll)
-                if check_contain_chinese(item['text']) is False:
-                    continue
+                # if check_contain_chinese(item['text']) is False:
+                #     continue
                 # if lll // 100 < 4:
                 #     _aver[lll // 100] += 1
                 # else:
@@ -86,6 +87,7 @@ class DataProcessor(object):
                     #     continue
                     all_num +=len_of_cont
                     examples.append(InputExample(guid=guid, question=question, answer=content, label=label))
+                    guid+=1
                     content = []
                     label = []
                     ll = 0
